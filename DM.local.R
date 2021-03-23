@@ -1,25 +1,10 @@
 
+# setup -------------------------------------------------------------------
+
 rm(list=ls())
 
-parlst. <- c('Timed up and Go (1/s)'          , 'tug.i',
-             'One Minute Walk (m)'            , 'w1m',
-             '6 Minute Walk (m)'              , 'w6m',
-             'Timed 25 Foot Walk (m/s)'       , 'w25.i',
-             '9 Hole Peg Test (1/min)'        , 'hpt.i',
-             'Timed 25 Foot Walk (m/s) unable', 'w25.iu',
-             '9 Hole Peg Test (1/min) unable' , 'hpt.iu',
-             'Berg Balance Scale'             , 'bbs',
-             'Activities of Daily Living'     , 'ADL',
-             'mFARS'                          , 'mFARS',
-             'Upright Stability (FARS.E)'     , 'FARS.E',
-             'Upper Limbs (FARS.B)'           , 'FARS.B',
-             'Lower Limbs (FARS.C)'           , 'FARS.C',
-             'Bulbar (FARS.Am)'               , 'FARS.Am' )
-
-params. <- parlst.[c(seq(1,25,2))]
-pars.   <- parlst.[c(seq(2,26,2))]
-
-rm(parlst.)
+require('labelled')
+source('list.pars.R')
 
 dt. <- bind_rows(
   .dd.FA('fars' , c = T),
@@ -39,9 +24,15 @@ dt. %<>%
     dt. %>% filter(paramcd %in% c('hpt.i', 'w25.i')) %>% filter(unable == F)
   )
 
+# factor labels -----------------------------------------------------------
+
 dt. %<>% 
   mutate(paramcd = factor(paramcd, pars.)) %>% 
   mutate(param   = factor(paramcd, pars., labels = params.))
+
+demo. <- .dd.FA('demo') %>% 
+  filter( sjid %in% dt.$sjid ) %>% 
+  mutate(study = 'FACHILD')
 
 rm(pars., params.)
 
@@ -61,27 +52,28 @@ dt. %<>%
   left_join( steps ) %>%
   .add.time( tm = 'age', keepadt = T) %>% 
   # filter ( is.na(amb) ) %>% ### !!!
-  group_by(study, paramcd)
+  group_by(sjid)
 
 rm(steps)
 
 # remove non-ambulatory t25fw ---------------------------------------------
 
-dt. %<>% 
-  filter (!(paramcd == 'w25.i' & amb == 'non-amb.')) %>% 
-  filter (!(paramcd == 'w25.iu' & amb == 'non-amb.')) 
+# need to be kept
+# dt. %>% 
+#   filter ((paramcd == 'w25.i' & amb == 'non-amb.')) %>%
+#   filter (!(paramcd == 'w25.iu' & amb == 'non-amb.')) 
 
-# save baseline by amb; only for covariate -------------------------------------
+# save baseline by amb ----------------------------------------------------
 
 base <- dt. %>%
-  filter  ( !is.na(amb)) %>%
+  filter  ( !is.na(amb)) %>% # should affect no pne at BL
   group_by( study, sjid, paramcd, amb) %>% # baseline by-amb!!
   filter  ( avisitn == min ( avisitn ) ) %>%
   group_by(sjid, paramcd, amb) %>% 
   arrange(sjid, paramcd, amb) %>% 
   rename  ( bl.age = age, bl = aval ) %>%
   ungroup %>% 
-  select  ( study, sjid, avisitn, amb, paramcd, bl.age, bl)
+  select  ( study, sjid, avisitn, amb, paramcd, bl, bl.age)
 
 # calculate changes and intervals (not just for for 4 following visits) --------
 
@@ -112,25 +104,62 @@ dt. %<>%
   group_by( study, sjid, paramcd, amb)
 
 rm(chg.all, base)
-# median BL age -----------------------------------------------------------
 
-tmp <- dt. %>% 
-  group_by(sjid) %>% 
-  select(sjid, avisitn, age) %>% 
-  filter( avisitn == 1 ) %>% 
-  unique %>% group_by(sjid) %>% 
-  filter(rank(age, ties.method = 'first')==1)
 
-med.bl.age <- median(tmp$age)  
+dt.long <- dt.
 
-age.groups <- tmp %>% mutate(age.groups = ifelse(age<med.bl.age, '<13.8y', '>13.8y')) %>% select(-age)
-rm(tmp)
+rm(dt.)
+# . -----------------------------------------------------------------------
+# 12 patients that were unable at something at baseline. used as empty
+# first age/dur during a visit is used (sometimes bbs comes from later)
 
-dt. %<>%
-  mutate ( age.groups = ifelse ( age < med.bl.age, '<13.8y', '>13.8y'))
+dt.bl <- dt.long %>% 
+  # select( sjid, age, sex, avisitn, symp, gaa1, pm, step, med.age, fds, amb, paramcd, aval) %>%
+  group_by ( sjid ) %>% 
+  arrange(sjid, paramcd, avisitn) %>% 
+  mutate( 
+    fu       = max(age)-min(age),
+    fu_v     = max(avisitn)-1,
+    bl.age   = min(age)
+  ) %>%
+  select(-c(param, time., age, adt, unable, dev.y, hpf, cbl)) %>% 
+  # filter(!(paramcd %in% c('FARS.Am', 'FARS.C'))) %>% 
+  spread( paramcd , aval ) %>% 
+  group_by( sjid ) %>% 
+  filter( avisitn == min(avisitn) ) %>% 
+  ungroup
 
-rm(age.groups)
+dt.bl %>% filter(n()>1)
 
-dt. %>% 
-  saveRDS ( 'DATA derived/lmer.data.rds' )
+# add subgroups and follow up stats ---------------------------------------
 
+med.bl.age    <- median(dt.bl$bl.age)  
+med.bl.FARS.E <- median(dt.bl$FARS.E, na.rm=T)  
+
+dt.bl %<>% 
+  mutate(med.age    = case_when(
+    bl.age > med.bl.age ~ paste('age >', round(med.bl.age,1)),
+    bl.age < med.bl.age ~ paste('age <', round(med.bl.age,1))
+    )) %>% 
+  mutate(med.FARS.E = case_when(
+    FARS.E > med.bl.FARS.E ~ paste('FARS.E >', round(med.bl.age,1)),
+    FARS.E < med.bl.FARS.E ~ paste('FARS.E <', round(med.bl.age,1)))
+    )
+
+
+dt.bl %<>% 
+  left_join(demo.) %>% 
+  mutate( pm = ifelse(pm == 0, 0, 1))
+
+var_label(dt.bl) <- list(symp = 'Age of Onset', pm = 'Point Mutation', gaa1 = 'Repeat Length (short)',
+                       med.age = 'Median Age',
+                       sex = 'Sex',
+                       bl.age  = 'Age (BL)', 
+                       fu = 'Follow Up (years)',
+                       fu_v = 'Follow Up (visits)')
+
+dt.bl %>% 
+  saveRDS ( 'DATA derived/dt.bl.rds' )
+
+dt.long %>% 
+  saveRDS ( 'DATA derived/dt.long.rds' )
