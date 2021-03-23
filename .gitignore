@@ -41,5 +41,6 @@ vignettes/*.pdf
 # CR
 # Ignore MD outputs
 *.html
+*.pptx
 DATA derived/
 R.FACHILD.Rproj
