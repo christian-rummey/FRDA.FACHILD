@@ -24,7 +24,7 @@ options(digits = 5)
       varLabels = T,
       nonnormal = c('bl.age', 'mx.age','dur','symp','gaa1','fu','fu_v'),
       contDigits = 1, catDigits = 0,
-      # missing = T,
+      missing = T,
       explain = F, dropEqual= F,
       add.rownames = T) %>%
     data.frame() %>% rownames_to_column() %>%

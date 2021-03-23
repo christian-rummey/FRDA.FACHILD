@@ -105,8 +105,11 @@ dt. %<>%
 
 rm(chg.all, base)
 
-
 dt.long <- dt.
+
+dt.long %<>% 
+  mutate(hpf = ifelse(is.na(hpf) | hpf == 'In-Person', 'In-Person', hpf)) %>%
+  mutate(hpf = factor(hpf, c('Video', 'Audio Only', 'In-Person'))) 
 
 rm(dt.)
 # . -----------------------------------------------------------------------
@@ -129,7 +132,7 @@ dt.bl <- dt.long %>%
   filter( avisitn == min(avisitn) ) %>% 
   ungroup
 
-dt.bl %>% filter(n()>1)
+dt.bl %>% group_by(sjid) %>% filter(n()>1) %>% arrange()
 
 # add subgroups and follow up stats ---------------------------------------
 
@@ -142,8 +145,8 @@ dt.bl %<>%
     bl.age < med.bl.age ~ paste('age <', round(med.bl.age,1))
     )) %>% 
   mutate(med.FARS.E = case_when(
-    FARS.E > med.bl.FARS.E ~ paste('FARS.E >', round(med.bl.age,1)),
-    FARS.E < med.bl.FARS.E ~ paste('FARS.E <', round(med.bl.age,1)))
+    FARS.E > med.bl.FARS.E ~ paste('FARS.E >', round(med.bl.FARS.E,1)),
+    FARS.E < med.bl.FARS.E ~ paste('FARS.E <', round(med.bl.FARS.E,1)))
     )
 
 
@@ -157,6 +160,9 @@ var_label(dt.bl) <- list(symp = 'Age of Onset', pm = 'Point Mutation', gaa1 = 'R
                        bl.age  = 'Age (BL)', 
                        fu = 'Follow Up (years)',
                        fu_v = 'Follow Up (visits)')
+
+
+
 
 dt.bl %>% 
   saveRDS ( 'DATA derived/dt.bl.rds' )
