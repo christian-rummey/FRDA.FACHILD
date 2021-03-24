@@ -112,7 +112,7 @@ rm(chg.all, base)
 dt.long <- dt.
 
 dt.long %<>% 
-  mutate(hpf = ifelse(is.na(hpf) | hpf == 'In-Person', 'In-Person', hpf)) %>%
+  # mutate(hpf = ifelse(is.na(hpf) | hpf == 'In-Person', 'In-Person', hpf)) %>%
   mutate(hpf = factor(hpf, c('Video', 'Audio Only', 'In-Person'))) 
 
 rm(dt.)
