@@ -49,7 +49,11 @@ steps <- .dd.FA('steps', c = T) %>%
 # keep visits without amb-status (baseline is available for everyone)
 
 dt. %<>%
-  left_join( steps ) %>%
+  left_join( steps )
+
+dt. %<>% 
+  group_by(sjid, amb) %>%
+  mutate( time. = as.numeric( adt - min(adt) ) / 365.25) %>%
   .add.time( tm = 'age', keepadt = T) %>% 
   # filter ( is.na(amb) ) %>% ### !!!
   group_by(sjid)
@@ -117,6 +121,8 @@ rm(dt.)
 # first age/dur during a visit is used (sometimes bbs comes from later)
 
 dt.bl <- dt.long %>% 
+  select(-fpf) %>% 
+  # filter( !(paramcd %in% c('w25.iu', 'hpt.iu')) ) %>% 
   # select( sjid, age, sex, avisitn, symp, gaa1, pm, step, med.age, fds, amb, paramcd, aval) %>%
   group_by ( sjid ) %>% 
   arrange(sjid, paramcd, avisitn) %>% 
