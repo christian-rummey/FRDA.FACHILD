@@ -67,14 +67,17 @@ dt.ss <- bind_rows(
   dt.long %>% filter(avisitn != 6) %>% mutate(group = med.FARS.E)
 )
 
+dt.ss %<>% 
+  filter(!is.na(group))
+
 dt.ss %<>%
   group_by(paramcd, param, group, avisit, avisitn ) %>% 
   filter(!is.na(cbl)) %>% 
   summarise(n = n(), m = mean( cbl ), s = sd(cbl )) %>% 
   group_by(paramcd, param, group) %>% 
-  mutate(height = min(m-max(s)))
+  mutate(height = min(m-max(s, na.rm=T), na.rm=T))
 
-.long.plot.descr.sub <- function (df, groups, parids) {
+.long.plot.descr.sub <- function (df, groups, parids, title) {
   
   .dodge <- position_dodge(width = 0.1)
   
@@ -96,71 +99,50 @@ dt.ss %<>%
     ggtitle(title)
   }
 
+
 read_pptx ( '../Templates/CR.template.pptx' ) %>%
-  add_slide ( layout = '1', master = 'CR')  %>%
+  add_slide ( layout = 'F', master = 'CR')  %>%
   ph_with   ( dml ( print ( 
-    .long.plot.descr(dt.s, c(1,2,3,4,5),    'Descriptive Changes, Extended Walking, T25FW & Peg Test'),
+    .long.plot.descr(dt.s, c(1,2,3,4,5),    'Extended Walking, T25FW & Peg Test - Descriptive Changes'),
     newpage = F ) ), location = ph_location_type( type = "body" , id = 1) ) %>%
   add_slide ( layout = 'F', master = 'CR')  %>%
   ph_with   ( dml ( print ( 
-    .long.plot.descr(dt.s, c(8,9,10,11,12), 'Descriptive Changes, Rating Scales and ADL')
+    .long.plot.descr(dt.s, c(8,9,10,11,12), 'Rating Scales and ADL - Descriptive Changes'),
     newpage = F ) ), location = ph_location_type( type = "body" , id = 1) ) %>%
   add_slide ( layout = 'F', master = 'CR')  %>%
-  ph_with   ( dml ( print ( 
-    .long.plot.descr.sub(dt.ss, c('ambulatory','non-amb.')         ,c(1,2,3,4,5),    'Descriptive Changes by Ambulation, Extended Walking, T25FW & Peg Test'),
+  ph_with   ( dml ( print (
+    .long.plot.descr.sub(dt.ss, c('ambulatory','non-amb.')         ,c(1,2,3,4,5),    'Extended Walking, T25FW & Peg Test - Descriptive Changes, by Ambulation'),
     newpage = F ) ), location = ph_location_type( type = "body" , id = 1) ) %>%
   add_slide ( layout = 'F', master = 'CR')  %>%
-  ph_with   ( dml ( print ( 
-    .long.plot.descr.sub(dt.ss, c('ambulatory','non-amb.')         ,c(1,2,3,4,5),    'Descriptive Changes by Ambulation, Extended Walking, T25FW & Peg Test'),
+  ph_with   ( dml ( print (
+    .long.plot.descr.sub(dt.ss, c('FARS.E < 22.8','FARS.E > 22.8') ,c(1,2,3,4,5),    'Extended Walking, T25FW & Peg Test - Descriptive Changes, by Median FARS E'),
     newpage = F ) ), location = ph_location_type( type = "body" , id = 1) ) %>%
   add_slide ( layout = 'F', master = 'CR')  %>%
-  ph_with   ( dml ( print ( 
-    .long.plot.descr.sub(dt.ss, c('ambulatory','non-amb.')         ,c(1,2,3,4,5),    'Descriptive Changes by Ambulation, Extended Walking, T25FW & Peg Test'),
+  ph_with   ( dml ( print (
+    .long.plot.descr.sub(dt.ss, c('age < 13.9','age > 13.9')       ,c(1,2,3,4,5),    'Extended Walking, T25FW & Peg Test - Descriptive Changes, by Median Age'),
     newpage = F ) ), location = ph_location_type( type = "body" , id = 1) ) %>%
   add_slide ( layout = 'F', master = 'CR')  %>%
-  ph_with   ( dml ( print ( 
-    .long.plot.descr.sub(dt.ss, c('ambulatory','non-amb.')         ,c(1,2,3,4,5),    'Descriptive Changes by Ambulation, Extended Walking, T25FW & Peg Test'),
+  ph_with   ( dml ( print (
+    .long.plot.descr.sub(dt.ss, c('ambulatory','non-amb.')         ,c(8,9,10,11,12), 'Rating Scales and ADL - Descriptive Changes, by Ambulation'),
     newpage = F ) ), location = ph_location_type( type = "body" , id = 1) ) %>%
   add_slide ( layout = 'F', master = 'CR')  %>%
-  ph_with   ( dml ( print ( 
-    .long.plot.descr.sub(dt.ss, c('ambulatory','non-amb.')         ,c(1,2,3,4,5),    'Descriptive Changes by Ambulation, Extended Walking, T25FW & Peg Test'),
+  ph_with   ( dml ( print (
+    .long.plot.descr.sub(dt.ss, c('FARS.E < 22.8','FARS.E > 22.8') ,c(8,9,10,11,12), 'Rating Scales and ADL - Descriptive Changes, by Median FARS E'),
     newpage = F ) ), location = ph_location_type( type = "body" , id = 1) ) %>%
   add_slide ( layout = 'F', master = 'CR')  %>%
-  ph_with   ( dml ( print ( 
-    .long.plot.descr.sub(dt.ss, c('ambulatory','non-amb.')         ,c(1,2,3,4,5),    'Descriptive Changes by Ambulation, Extended Walking, T25FW & Peg Test'),
+  ph_with   ( dml ( print (
+    .long.plot.descr.sub(dt.ss, c('age < 13.9','age > 13.9')       ,c(8,9,10,11,12), 'Rating Scales and ADL - Descriptive Changes, by Median Age'),
     newpage = F ) ), location = ph_location_type( type = "body" , id = 1) ) %>%
   print ( target = paste('Changes.DESC.', gsub(":","-", Sys.time()), ".pptx", sep="") )
 
 # .long.plot.descr(dt.s, c(1,2,3,4,5),    'Descriptive Changes, Extended Walking, T25FW & Peg Test'),
-# .long.plot.descr(dt.s, c(8,9,10,11,12), 'Descriptive Changes, Rating Scales and ADL')
+# .long.plot.descr(dt.s, c(8,9,10,11,12), 'Descriptive Changes, Rating Scales and ADL'),
 
 
-# .long.plot.descr.sub(dt.ss, c('ambulatory','non-amb.')         ,c(1,2,3,4,5),    'Descriptive Changes by Ambulation, Extended Walking, T25FW & Peg Test')
-# .long.plot.descr.sub(dt.ss, c('FARS.E < 22.8','FARS.E > 22.8') ,c(1,2,3,4,5),    'Descriptive Changes by Median FARS E, Extended Walking, T25FW & Peg Test')
-# .long.plot.descr.sub(dt.ss, c('age < 13.9','age > 13.9')       ,c(1,2,3,4,5),    'Descriptive Changes by Median Age, Extended Walking, T25FW & Peg Test')
+# .long.plot.descr.sub(dt.ss, c('ambulatory','non-amb.')         ,c(1,2,3,4,5),    'Descriptive Changes by Ambulation, Extended Walking, T25FW & Peg Test'),
+# .long.plot.descr.sub(dt.ss, c('FARS.E < 22.8','FARS.E > 22.8') ,c(1,2,3,4,5),    'Descriptive Changes by Median FARS E, Extended Walking, T25FW & Peg Test'),
+# .long.plot.descr.sub(dt.ss, c('age < 13.9','age > 13.9')       ,c(1,2,3,4,5),    'Descriptive Changes by Median Age, Extended Walking, T25FW & Peg Test'),
 # 
-# .long.plot.descr.sub(dt.ss, c('ambulatory','non-amb.')         ,c(8,9,10,11,12), 'Descriptive Changes by Ambulation, Rating Scales and ADL')
-# .long.plot.descr.sub(dt.ss, c('FARS.E < 22.8','FARS.E > 22.8') ,c(8,9,10,11,12), 'Descriptive Changes by Median FARS E, Rating Scales and ADL')
-# .long.plot.descr.sub(dt.ss, c('age < 13.9','age > 13.9')       ,c(8,9,10,11,12), 'Descriptive Changes by Median Age, Rating Scales and ADL')
-
-# plots <- list(
-#   .long.plot.descr(dt.s, c(1,2,3,4,5),    'Descriptive Changes, Extended Walking, T25FW & Peg Test'),
-#   .long.plot.descr(dt.s, c(1,2,3,4,5),    'Descriptive Changes, Extended Walking, T25FW & Peg Test')
-# )
-# layouts <- c(
-#   'F','F'
-# )
-# 
-# .write2ppt( list, layouts )
-# 
-# .write2ppt <- function ( list, layouts ) {
-#   
-#   thepptx   <- read_pptx ( '../Templates/CR.template.pptx' )
-#   
-#   for (plot in length(list)) {
-#     thepptx %<>% add_slide ( layout = layouts[plot], master = 'CR')
-#     thepptx %<>% ph_with ( dml( print ( list[plot], newpage = F ) ), location = ph_location_type( type = "body" , id = 1) )
-#   }
-#   thepptx %<>% print ( target = paste('Longitudinal.Graphs.Descriptive.', gsub(":","-", Sys.time()), ".pptx", sep="") )
-# }
-
+# .long.plot.descr.sub(dt.ss, c('ambulatory','non-amb.')         ,c(8,9,10,11,12), 'Descriptive Changes by Ambulation, Rating Scales and ADL'),
+# .long.plot.descr.sub(dt.ss, c('FARS.E < 22.8','FARS.E > 22.8') ,c(8,9,10,11,12), 'Descriptive Changes by Median FARS E, Rating Scales and ADL'),
+# .long.plot.descr.sub(dt.ss, c('age < 13.9','age > 13.9')       ,c(8,9,10,11,12), 'Descriptive Changes by Median Age, Rating Scales and ADL'),

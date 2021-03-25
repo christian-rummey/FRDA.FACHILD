@@ -78,13 +78,13 @@ base <- dt. %>%
   arrange(sjid, paramcd) %>% 
   rename  ( bl.age = age, bl = aval ) %>%
   ungroup %>% 
-  select  ( study, sjid, avisitn, amb, paramcd, bl, bl.age)
+  select  ( study, sjid, paramcd, bl, bl.age)
 
 # calculate changes and intervals (not just for for 4 following visits) --------
 
 chg.all <- dt. %>%
   # filter(!is.na(amb)) %>% 
-  left_join( base, by = c("study", "sjid", "avisitn", "paramcd") ) %>% 
+  left_join( base, by = c("study", "sjid", "paramcd") ) %>% 
   group_by ( sjid, paramcd ) %>% 
   mutate( bl     = mean(bl    , na.rm=T)) %>% 
   mutate( bl.age = mean(bl.age, na.rm=T)) %>% 
@@ -101,6 +101,8 @@ chg.all <- dt. %>%
 # add changes to dt -------------------------------------------------------
 
 dt. %<>% 
+  left_join(base) %>% 
+  # filter(is.na(bl))
   left_join(chg.all) %>%
   select( names(dt.), everything() ) %>% 
   # group_by( study, sjid, paramcd, avisitn ) %>% 
@@ -132,7 +134,7 @@ dt.bl <- dt.long %>%
     fu_v     = max(avisitn)-1,
     bl.age   = min(age)
   ) %>%
-  select(-c(param, time., age, adt, unable, dev.y, hpf, cbl)) %>% 
+  select(-c(param, time., bl, age, adt, unable, dev.y, hpf, cbl)) %>% 
   # filter(!(paramcd %in% c('FARS.Am', 'FARS.C'))) %>% 
   spread( paramcd , aval ) %>% 
   group_by( sjid ) %>% 
@@ -167,9 +169,6 @@ var_label(dt.bl) <- list(symp = 'Age of Onset', pm = 'Point Mutation', gaa1 = 'R
                        bl.age  = 'Age (BL)', 
                        fu = 'Follow Up (years)',
                        fu_v = 'Follow Up (visits)')
-
-
-
 
 dt.bl %>% 
   saveRDS ( 'DATA derived/dt.bl.rds' )
