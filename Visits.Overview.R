@@ -50,6 +50,8 @@ p1 <- dt %>%
   xlab('Follow Up Visit')+
   ylab('Subjects (%)')
 
+p1
+
 # video visits -------------------------------------------------------
 
 dt. %>%
@@ -81,6 +83,8 @@ p2 <- dt. %>%
   geom_text(stat='count', aes(label=..count..), hjust=2, color = 'white')+
   coord_flip()+
   theme_minimal(base_size = 16)
+
+p2
 
 read_pptx( '../Templates/CR.template.pptx' ) %>%
   add_slide   ( layout = 'TTE', master = 'CR') %>%

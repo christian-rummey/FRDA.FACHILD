@@ -44,16 +44,17 @@ p1
 p2 <- dt. %>%
   left_join(virt.vis) %>% mutate(virtual = ifelse(is.na(virtual), 'In-Person', virtual)) %>% 
   ggplot()+
+  geom_point( size = 2 ) + geom_line( ) +
   aes(x = adt, y = sjid)+
   aes(group = sjid, color = site)+
   aes(shape = virtual)+scale_shape_manual(values=c(21,19))+
   # scale_y_discrete()+
-  geom_point()+geom_line()+
   theme_minimal(base_size = 16)+
   theme(panel.grid.minor.y = element_blank(), panel.grid.major.y = element_blank())+
   theme(axis.text.y = element_blank())+.leg_tl+
   xlab('Date')+ylab('Subjects')+
-  ggtitle('Follow-up Timeline')+theme(plot.title = element_text(hjust = 0.5))
+  ggtitle('Follow-up Timeline')+theme(plot.title = element_text(hjust = 0.5))+
+  geom_vline(xintercept = as.Date('2020-03-01'))
 
 p2
 
