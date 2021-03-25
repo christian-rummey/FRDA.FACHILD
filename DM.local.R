@@ -67,14 +67,15 @@ rm(steps)
 #   filter ((paramcd == 'w25.i' & amb == 'non-amb.')) %>%
 #   filter (!(paramcd == 'w25.iu' & amb == 'non-amb.')) 
 
-# save baseline by amb ----------------------------------------------------
+# save baseline NOT by amb ----------------------------------------------------
+# changed 26.03.2021
 
 base <- dt. %>%
-  filter  ( !is.na(amb)) %>% # should affect no pne at BL
-  group_by( study, sjid, paramcd, amb) %>% # baseline by-amb!!
+  # filter  ( !is.na(amb)) %>% # should affect no pne at BL
+  group_by( study, sjid, paramcd ) %>% # baseline by-amb!!
   filter  ( avisitn == min ( avisitn ) ) %>%
-  group_by(sjid, paramcd, amb) %>% 
-  arrange(sjid, paramcd, amb) %>% 
+  group_by(sjid, paramcd) %>% 
+  arrange(sjid, paramcd) %>% 
   rename  ( bl.age = age, bl = aval ) %>%
   ungroup %>% 
   select  ( study, sjid, avisitn, amb, paramcd, bl, bl.age)
