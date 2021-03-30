@@ -6,17 +6,19 @@ rm(list=ls())
 require('labelled')
 source('list.pars.R')
 
-dt.   <- readRDS('DATA derived/dt.long.rds')
+dt.       <- readRDS('DATA derived/dt.long.rds')
+visstat   <- .ds.FACHILD('visstat')  
 
 dt. %>% 
+  
   ungroup %>% 
   select(study, sjid, avisitn) %>% 
   unique
 
-.rd.FACHILD('exttw') %>% filter(HOWPERF != 1)
-.rd.FACHILD('bbs')   %>% filter(HOWPERF != 1)
-.rd.FACHILD('t25fw') %>% filter(HOWPERF != 1)
-.rd.FACHILD('tug')   %>% filter(HOWPERF != 1)
+.rd.FACHILD('exttw') %>% filter(howperf != 1)
+.rd.FACHILD('bbs')   %>% filter(howperf != 1)
+.rd.FACHILD('t25fw') %>% filter(howperf != 1)
+.rd.FACHILD('tug')   %>% filter(howperf != 1)
 
 
 # follow up type barchart ----------------------------
@@ -52,6 +54,70 @@ p1 <- dt %>%
 
 p1
 
+# same from visstat -------------------------------------------------------
+# 5138 BL is missing form visstat (V3 is listed as not done )
+
+# other reasons
+visstat %>% 
+  filter(vismsrsn == 10) %>% 
+  select(sjid, avisitn, adt, vismsrsn, vismscm)
+
+dt2 <- visstat %>% 
+  mutate(avisit = factor(avisitn, labels = c('BL','6m','1y','1.5y','2y','3y') ) ) %>% 
+  mutate(vismsrsn. = case_when(
+    vismsrsn == 10 ~ 'Other',
+    vismsrsn == 4  ~ 'Subject did not respond',
+    vismsrsn == 5  ~ 'Travel distance',
+    vismsrsn == 6  ~ 'Medical problems',
+    vismsrsn %in% c(1,2,3,14)  ~ 'Scheduling issues',
+    vismsrsn == 15 ~ 'COVID-19 pandemic')) %>%
+  mutate(vismsrsn. = factor(vismsrsn., c('COVID-19 pandemic','Scheduling issues',
+                                         'Medical problems','Travel distance','Subject did not respond','Other'))) %>% 
+  select(study , sjid, avisit, avisitn, viscmplt, assmperf, vismsrsn, vismsrsn.) %>% 
+  group_by(avisit, vismsrsn.) %>% 
+  count() %>% 
+  mutate(pct = 100*n/108) %>% 
+  mutate(tm.tmp = ifelse(avisit == 'BL', 0,
+                         ifelse(avisit=='6m', 0.5,
+                                ifelse(avisit=='1y', 1.0,
+                                       ifelse(avisit=='1.5y', 1.5, 
+                                              ifelse(avisit=='2y', 2,
+                                                     ifelse(avisit=='3y', 3, NA)))))))
+
+dt2 %>% 
+  ungroup %>% 
+  filter(!is.na(vismsrsn.)) %>% 
+  summarise(sum(n))
+
+
+dt2 %>% 
+  group_by(vismsrsn.) %>% 
+  filter(!is.na(vismsrsn.)) %>% 
+  summarise(sum(n))
+
+p2 <- dt2 %>% 
+  ggplot()+geom_col()+
+  # aes(x = avisitn, y = pct) +
+  # aes(x = c(0, 0.5,1, 1.5, 2, 3), y = pct) +
+  aes(x = tm.tmp, y = pct) +
+  scale_x_continuous(breaks = c(0,0.5,1, 1.5, 2, 3), labels = c('BL','6m','1y','1.5y','2y','3y'))+
+  aes(fill = vismsrsn. ) +
+  # scale_x_continuous    ( breaks = seq(1,6,1), labels = c('BL','6m','1y','1.5y','2y','3y'))+
+  scale_fill_brewer ( palette = 'Set1',na.value="grey")+
+  theme_minimal(base_size = 16)+
+  theme(panel.grid.major.x = element_blank(), panel.grid.major.y = element_blank())+
+  xlab('Follow Up Visit')+
+  ylab('Subjects (%)')+
+  guides(fill = guide_legend("Reason"))+
+  .leg_llh+
+  theme(
+    legend.position =  c(0.1, 0.1),
+    legend.background = element_rect(fill="white",
+                                         size=0.5, linetype="solid")
+    )
+  
+p2  
+  
 # video visits -------------------------------------------------------
 
 dt. %>%
@@ -69,8 +135,7 @@ dt. %>%
   group_by(avisitn) %>% 
   count
 
-
-p2 <- dt. %>%
+p3 <- dt. %>%
   ungroup %>% 
   # mutate(hpf = ifelse( is.na(hpf), 'filler', as.character(hpf))) %>% 
   select( -fpf ) %>% 
@@ -84,13 +149,15 @@ p2 <- dt. %>%
   coord_flip()+
   theme_minimal(base_size = 16)
 
-p2
+p3
 
 read_pptx( '../Templates/CR.template.pptx' ) %>%
   add_slide   ( layout = 'TTE', master = 'CR') %>%
   ph_with     ( dml( print ( p1, newpage = F ) ), location = ph_location_type( type = "body" , id = 1) ) %>%
   add_slide   ( layout = 'TTE', master = 'CR') %>%
   ph_with     ( dml( print ( p2, newpage = F ) ), location = ph_location_type( type = "body" , id = 1) ) %>%
+  add_slide   ( layout = 'TTE', master = 'CR') %>%
+  ph_with     ( dml( print ( p3, newpage = F ) ), location = ph_location_type( type = "body" , id = 1) ) %>%
   print ( target = paste('Visits.Overview.', gsub(":","-", Sys.time()), ".pptx", sep="") )
 
 
