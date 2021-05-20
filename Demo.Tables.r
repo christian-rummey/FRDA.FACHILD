@@ -10,13 +10,15 @@ dt.bl   <- readRDS('DATA derived/dt.bl.rds')
 
 options(digits = 5)
 
+dt.bl  %<>% 
+  mutate( mFARS20 = ifelse( mFARS < 20, 'mFARS < 20' , 'mFARS \u2265 20' ) ) 
 
 # demo.table all --------------------------------------------------------------
 
 .tab1.all <- function ( df )  {
   tb <- tableone::CreateTableOne(
-    vars       = c('sex','symp', 'gaa1', 'pm', 'bl.age', 'fu_v', 'amb', 'mFARS', 'FARS.E','ADL','bbs'),
-    factorVars = c('sex','amb', 'pm'),
+    vars       = c('sex','symp', 'gaa1', 'pm', 'bl.age', 'fu_v', 'amb', 'mFARS', 'mFARS20' ,'FARS.E','ADL','bbs'),
+    factorVars = c('sex','amb', 'pm','mFARS20'),
     test = F,
     data       = df
   ) %>% 
@@ -36,7 +38,7 @@ options(digits = 5)
 }
 .tab1.sub <- function (df, strata = NA )  {
   tb <- tableone::CreateTableOne(
-    vars       = c('sex','symp', 'gaa1', 'pm', 'bl.age', 'fu_v', 'amb', 'mFARS', 'FARS.E','ADL','bbs'),
+    vars       = c('sex','symp', 'gaa1', 'pm', 'bl.age', 'fu_v', 'amb', 'mFARS', 'mFARS20', 'FARS.E','ADL','bbs'),
     factorVars = c('sex','amb', 'pm'),
     strata     = strata,
     test = F,

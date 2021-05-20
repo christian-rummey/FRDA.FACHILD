@@ -54,7 +54,9 @@ p2 <- dt. %>%
   theme(axis.text.y = element_blank())+.leg_tl+
   xlab('Date')+ylab('Subjects')+
   ggtitle('Follow-up Timeline')+theme(plot.title = element_text(hjust = 0.5))+
-  geom_vline(xintercept = as.Date('2020-03-01'))
+  geom_vline(xintercept = as.Date('2020-03-01'))+
+  geom_vline(xintercept = as.Date('2017-10-10'), linetype = 'dashed', size = 1)+
+  geom_vline(xintercept = as.Date('2019-10-08'), linetype = 'dashed', size = 1)
 
 p2
 
@@ -64,5 +66,6 @@ read_pptx( '../Templates/CR.template.pptx' ) %>%
   add_slide   ( layout = 'TTE', master = 'CR') %>%
   ph_with     ( p1, location = ph_location_type( type = "body" , id = 1) ) %>%
   add_slide   ( layout = 'TTE', master = 'CR') %>%
-  ph_with     ( p2, location = ph_location_type( type = "body" , id = 1) ) %>%
+  ph_with     ( dml( print ( p2, newpage = F ) ), location = ph_location_type( type = "body" , id = 1) ) %>%
+  # ph_with     ( p2, location = ph_location_type( type = "body" , id = 1) ) %>%
   print ( target = paste('Visits.Timeline.', gsub(":","-", Sys.time()), ".pptx", sep="") )
