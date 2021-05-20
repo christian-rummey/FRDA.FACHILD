@@ -12,7 +12,17 @@ theme_set(
 
 # outcomes selection ------------------------------------------------------
 
-params <- params.[c(8)]
+params.
+
+parid <- 5
+
+param <- params.[c(parid)]
+
+groups   <- c("all", "ambulatory", "non-amb.", "age < 13.9", "age > 13.9", "FARS.E < 22.8", "FARS.E > 22.8")
+sgs.a    <- groups[c(1)]
+sgs.1    <- groups[c(2,3)]
+sgs.2    <- groups[c(4,5)]
+sgs.3    <- groups[c(6,7)]
 
 # datasets ----------------------------------------------------------------
 
@@ -23,7 +33,7 @@ est.chg <- readRDS( 'DATA derived/dt.est.chg.rds'   )
 
 # plots -------------------------------------------------------------------
 
-.long.plot.MMRM <- function (df, parid) {
+.plot <- function (df, parid) {
   
   title = paste(params.[parid], '- Estimated Changes (MMRM)')
   
@@ -49,11 +59,11 @@ est.chg <- readRDS( 'DATA derived/dt.est.chg.rds'   )
     .leg_ll+
     xlab('Visit')+
     ylab('Estimated Change (95%CI)')+
-    ggtitle(title)+
+    # ggtitle(title)+
     coord_cartesian(ylim = c(mxmn$mn, mxmn$mx))
   }
 
-.long.plot.MMRM.sub <- function (df, groups, parid, title) {
+.plot.sub <- function (df, groups, parid) {
   
   .dodge <- position_dodge(width = 0.1)
   
@@ -80,57 +90,92 @@ est.chg <- readRDS( 'DATA derived/dt.est.chg.rds'   )
     .leg_lr+
     xlab('Visit')+
     ylab('Estimated Change (95%CI)')+
-    ggtitle(title)+
+    # ggtitle(title)+
     coord_cartesian(ylim = c(mxmn$mn, mxmn$mx))
   
   }
 
-p1 <- .long.plot.MMRM    (est.chg, c(10))
-p2 <- .long.plot.MMRM.sub(est.chg, c('ambulatory','non-amb.')         ,c(10), 'mFARS by Ambulation, Estimated Changes (MMRM)')
-p3 <- .long.plot.MMRM.sub(est.chg, c('FARS.E < 22.8','FARS.E > 22.8') ,c(10), 'mFARS by Median FARS E, Estimated Changes (MMRM)')
-p4 <- .long.plot.MMRM.sub(est.chg, c('age < 13.9','age > 13.9')       ,c(10), 'mFARS by Median Age, Estimated Changes (MMRM)')
+# p1 <- .long.plot.MMRM    (est.chg, parid)
+# p2 <- .long.plot.MMRM.sub(est.chg, c('ambulatory','non-amb.')         ,parid)
+# p3 <- .long.plot.MMRM.sub(est.chg, c('FARS.E < 22.8','FARS.E > 22.8') ,parid)
+# p4 <- .long.plot.MMRM.sub(est.chg, c('age < 13.9','age > 13.9')       ,parid)
 
 # tables ------------------------------------------------------------------
 
-ft1 <- est.chg %>% 
-  filter(avisit != 'BL') %>% 
-  # filter( param %in% params.[parid]) %>% 
-  # filter( group %in% groups ) %>% 
-  filter( param %in% 'mFARS') %>% 
-  filter( group %in% c('age < 13.9', 'age > 13.9') ) %>% 
-  select(param, group, avisit, estimate, conf.low, conf.high, p.value) %>% 
-  mutate_at('p.value', ~ sprintf('%.4f', .)) %>% 
-  mutate_at(c('estimate', 'conf.high', 'conf.low'), ~ sprintf('%.1f', .)) %>% 
-  mutate(result = paste(estimate, '\n', conf.low, 'to', conf.high, '\n', p.value)) %>% 
-  select(param, group, avisit, result) %>% 
-  spread(avisit, result) %>% 
-  flextable
+.table <- function (df, parid, groups = 'all') {
+  
+  if (pars.[parid] %in% c('w6m')) {
+      df %<>%
+        mutate_at(c('estimate', 'conf.high', 'conf.low'), ~ sprintf('%.0f', .))
+    } else if (pars.[parid] %in% c('hpt.i','w25.i', 'tug.i')) {
+      df %<>%
+        mutate_at(c('estimate', 'conf.high', 'conf.low'), ~ sprintf('%.3f', .))
+    } else {
+      df %<>%
+        mutate_at(c('estimate', 'conf.high', 'conf.low'), ~ sprintf('%.1f', .))
+      }
+  
+  ft <- df %>%
+    filter( avisit != 'BL') %>%
+    filter( param %in% params.[parid]) %>%
+    filter( group %in% groups ) %>%
+    select( param, group, avisit, estimate, conf.low, conf.high, p.value) %>%
+    mutate_at('p.value', ~ sprintf('%.4f', .)) %>%
+    mutate(result = paste(estimate, '\n', conf.low, 'to', conf.high, '\np=', p.value)) %>%
+    select(param, group, avisit, result) %>%
+    spread(avisit, result) %>%
+    flextable() %>% 
+    border_remove() %>% 
+    delete_part( part = "header" ) %>%
+    merge_at( j = c(1) ) %>% 
+    align(align = 'center', part = 'all') %>% 
+    width( c(1,2), width = 1.9/2) %>% 
+    width( c(3,4,5,6), width = (7.1-1.8)/4) %>% 
+    height_all( height = 1.69/2) %>% 
+    line_spacing(space = 1, part = "body")
 
-ft1 %<>% 
-  theme_alafoli() %>% 
-  delete_part( part = "header" ) %>% 
-  align(align = 'center', part = 'all') %>% 
-  width( c(1,2), width = 1.9/2) %>% 
-  width( c(3,4,5,6), width = (7.4-1.9)/4)
+  if (length(groups)>1){
+    
+    ft %<>% 
+      hline(i = 1, j = c(2:6), part = 'body', border = fp_border(width = .5))
+      
+  }
+
+  return (ft)
+}
 
 # output ------------------------------------------------------------------
 
 read_pptx ( '../Templates/CR.template.pptx' ) %>%
-  # add_slide ( layout = 'TTEsplit', master = 'CR')  %>%
-  # ph_with   ( dml ( print ( 
-  #   p1,
-  #   newpage = F ) ), location = ph_location_type( type = "body" , id = 3) ) %>%
-  # add_slide ( layout = 'TTEsplit', master = 'CR')  %>%
-  # ph_with   ( dml ( print ( 
-  #   p2,
-  #   newpage = F ) ), location = ph_location_type( type = "body" , id = 3) ) %>%
-  # add_slide ( layout = 'TTEsplit', master = 'CR')  %>%
-  # ph_with   ( dml ( print (
-  #   p3,
-  #   newpage = F ) ), location = ph_location_type( type = "body" , id = 3) ) %>%
   add_slide ( layout = 'TTEsplit', master = 'CR')  %>%
   ph_with   ( dml ( print (
-    p4,
+    .plot (est.chg, parid),
     newpage = F ) ), location = ph_location_type( type = "body" , id = 3) ) %>%
-  ph_with   ( ft1 , location = ph_location_type( type = "body" , id = 2) ) %>%
-  print ( target = paste('FARS.E.Changes.MMRM.', gsub(":","-", Sys.time()), ".pptx", sep="") )
+  ph_with ( 
+    .table( est.chg, parid),
+    location = ph_location_type( type = "body" , id = 2) ) %>%
+  add_slide ( layout = 'TTEsplit', master = 'CR')  %>%
+  ph_with   ( dml ( print (
+    .plot.sub (est.chg, sgs.1, parid),
+    newpage = F ) ), location = ph_location_type( type = "body" , id = 3) ) %>%
+  ph_with ( 
+    .table( est.chg, parid, sgs.1),
+    location = ph_location_type( type = "body" , id = 2) ) %>%
+  add_slide ( layout = 'TTEsplit', master = 'CR')  %>%
+  ph_with   ( dml ( print (
+    .plot.sub (est.chg, sgs.2, parid),
+    newpage = F ) ), location = ph_location_type( type = "body" , id = 3) ) %>%
+  ph_with ( 
+    .table( est.chg, parid, sgs.2),
+    location = ph_location_type( type = "body" , id = 2) ) %>%
+  add_slide ( layout = 'TTEsplit', master = 'CR')  %>%
+  ph_with   ( dml ( print (
+    .plot.sub (est.chg, sgs.3, parid),
+    newpage = F ) ), location = ph_location_type( type = "body" , id = 3) ) %>%
+  ph_with ( 
+    .table( est.chg, parid, sgs.3),
+    location = ph_location_type( type = "body" , id = 2) ) %>%
+  print ( target = paste('Changes.', gsub("[[:punct:]]", "", param) , '.' ,gsub(":","-", Sys.time()), ".pptx", sep="") )
+
+
+
