@@ -165,36 +165,36 @@ x <- dt. %>%
   mutate_at('unable', ~ ifelse(is.na(.)  , 0 , unable) ) %>%
   mutate_at('unable', ~ factor(unable, c(0,3.1, 4.1, 1, 2, 3, 4)))
 
-levels(x$unable) <- c('-','one trial (second fatigue)','one trial (second refused)','unable, progr.', 'unable, other', 'fatigue','refused' ) 
-
-x %>% 
-  mutate_at('device', ~ ifelse(unable.TF , NA, device) ) %>% 
-  mutate_at('device', ~ ifelse(is.na(.)  , -1, device) ) %>% 
-  # mutate(age = cut(age, c(6.6, 9, 12, 15, 19.1), labels = c('\u22649','10-12','13-15', '16-19'))) %>% 
-  mutate(age = cut(age, seq(6, 21, 3), labels = c('\u22649','10-12','13-15','16-18','>18'))) %>% 
-  mutate(FARS.E = cut(FARS.E, seq(0, 36, 6))) %>%
-  # filter(!is.na(FARS.E)) %>% 
-  ggplot()+geom_bar()+
-  aes( x = FARS.E )+
-  aes(fill = factor(unable))+
-  # scale_fill_manual(values = c('grey', RColorBrewer::brewer.pal(3, 'Set1'))[c(1,3,4)], labels = c('unable', '-', 'device' ))+
-  scale_fill_manual(values = c('#3182bd','#9ecae1','#c6dbef','grey','darkgrey','#fec44f','#d95f0e'))+
-  facet_wrap(~param, ncol = 3)+
-  # geom_hline(yintercept = c(0,50,100), linetype = 'dotted')+
-  theme_minimal(base_size = 12)+
-  ggtitle('Unable/No Data by Age')+theme(plot.title = element_text(hjust = 0.5))+
-  xlab('FARS.E')+
-  ylab('Number of Observations')+
-  .leg_lrh
+levels(x$unable) <- c('-','one trial (second fatigue)','one trial (second refused)','unable, progr.', 'unable, other', 'fatigue','refused' )
+# 
+# x %>% 
+#   # mutate_at('device', ~ ifelse(unable.TF , NA, device) ) %>% 
+#   # mutate_at('device', ~ ifelse(is.na(.)  , -1, device) ) %>% 
+#   # mutate(age = cut(age, c(6.6, 9, 12, 15, 19.1), labels = c('\u22649','10-12','13-15', '16-19'))) %>% 
+#   mutate(age = cut(age, seq(6, 21, 3), labels = c('\u22649','10-12','13-15','16-18','>18'))) %>% 
+#   mutate(FARS.E = cut(FARS.E, seq(0, 36, 6))) %>%
+#   # filter(!is.na(FARS.E)) %>% 
+#   ggplot()+geom_bar()+
+#   aes( x = FARS.E )+
+#   aes(fill = factor(unable))+
+#   # scale_fill_manual(values = c('grey', RColorBrewer::brewer.pal(3, 'Set1'))[c(1,3,4)], labels = c('unable', '-', 'device' ))+
+#   scale_fill_manual(values = c('#3182bd','#9ecae1','#c6dbef','grey','darkgrey','#fec44f','#d95f0e'))+
+#   facet_wrap(~param, ncol = 3)+
+#   # geom_hline(yintercept = c(0,50,100), linetype = 'dotted')+
+#   theme_minimal(base_size = 12)+
+#   ggtitle('Unable/No Data by Age')+theme(plot.title = element_text(hjust = 0.5))+
+#   xlab('FARS.E')+
+#   ylab('Number of Observations')+
+#   .leg_lrh
 
 # .sp('Device use by Age, unable w6m in Walking Tests')
 
 # by t25fw ----------------------------------------------------------------
 
-dt. %>% 
-  filter(paramcd == 'w25.i') %>% 
-  select(sjid, avisitn, aval, unable.TF)
-filter(w25.i, !w6m)
+# dt. %>% 
+#   filter(paramcd == 'w25.i') %>% 
+#   select(sjid, avisitn, aval, unable.TF)
+# filter(w25.i, !w6m)
 
 
 
