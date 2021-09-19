@@ -12,9 +12,20 @@ parlst. <- c('Timed up and Go (1/s)'          , 'tug.i',
              'Upright Stability (FARS.E)'     , 'FARS.E',
              'Upper Limbs (FARS.B)'           , 'FARS.B',
              'Lower Limbs (FARS.C)'           , 'FARS.C',
-             'Bulbar (FARS.Am)'               , 'FARS.Am' )
+             'Bulbar (FARS.Am)'               , 'FARS.Am',
+             'PQL Total Score C'              , 'TOT.C',
+             'PQL Total Score P'              , 'TOT.P',
+             'PQL Physical C'                 , 'PF.C',
+             'PQL Physical P'                 , 'PF.P',
+             'PQL Emotional C'                , 'EF.C',
+             'PQL Emotional P'                , 'EF.P',
+             'PQL Social C'                   , 'SO.C',
+             'PQL Social P'                   , 'SO.P',
+             'PQL School C'                   , 'SC.C',
+             'PQL School P'                   , 'SC.P'
+             )
 
-params. <- parlst.[c(seq(1,25,2))]
-pars.   <- parlst.[c(seq(2,26,2))]
+params. <- parlst.[c(seq(1,47,2))]
+pars.   <- parlst.[c(seq(2,48,2))]
 
 rm(parlst.)

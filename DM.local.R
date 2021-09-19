@@ -10,10 +10,21 @@ dt. <- bind_rows(
   .dd.FA('fars' , c = T),
   .dd.FA('scafi', c = T) %>% filter(!(sjid == 5136 & paramcd == 'tug.i' & aval == 2)), # tug in two seconds
   .dd.FA('bbs'  , c = T),
-  .dd.FA('adl'  , c = T)
+  .dd.FA('adl'  , c = T),
+  .dd.FA('pedsql', c = T),
   ) %>% 
-  filter( paramcd %in% pars.) %>% 
-  filter( study == 'FACHILD' )
+  filter( study %in% c('FACHILD', 'FACOMS')) %>% 
+  filter( paramcd %in% pars.) 
+
+sjids.FACHILD <- dt. %>% 
+  filter(study == 'FACHILD') %>%  select(sjid) %>% unique
+
+dt. <- bind_rows(
+    dt. %>% filter(study == 'FACHILD'),
+    dt. %>% filter(study == 'FACOMS') %>% filter(!(sjid %in% sjids.FACHILD))
+    )
+
+# dt. %<>% filter(sjid %in% c(115, 5183))
 
 # remove undable from timedM and add unable-pars --------------------------
 
@@ -26,20 +37,24 @@ dt. %<>%
 
 # factor labels -----------------------------------------------------------
 
+demo. <- .dd.FA('demo') %>% 
+  filter( sjid %in% dt.$sjid ) %>% 
+  filter( study %in% c('FACHILD', 'FACOMS')) %>% 
+  mutate( study = ifelse(sjid %in% sjids.FACHILD, 'FACHILD', 'FACOMS'))
+
 dt. %<>% 
   mutate(paramcd = factor(paramcd, pars.)) %>% 
   mutate(param   = factor(paramcd, pars., labels = params.))
 
-demo. <- .dd.FA('demo') %>% 
-  filter( sjid %in% dt.$sjid ) %>% 
-  mutate(study = 'FACHILD')
+dt. %<>% 
+  filter(sjid %in% demo.$sjid)
 
 rm(pars., params.)
 
 # add steps ---------------------------------------------------------------
 # 5183/BL has fars data in FACOMS, but not in FACHILD  
 steps <- .dd.FA('steps', c = T) %>% 
-  filter(study == 'FACHILD') %>% 
+  # filter(study == 'FACHILD') %>% 
   bind_rows(
     .dd.FA('steps') %>%
       filter(sjid == '5183') %>% mutate(study = 'FACHILD', avisitn = 3)
@@ -60,12 +75,29 @@ dt. %<>%
 
 rm(steps)
 
+# restrict ages -----------------------------------------------------------
+
+dt. %>% 
+  ungroup %>% filter(study == 'FACHILD') %>%  
+  select( age ) %>% 
+  range()
+
+dt. %<>% 
+  filter(age < 21.5)
+
+# dt. %>% 
+#   group_by(study, sjid, paramcd) %>% 
+#   mutate(n = n()) %>%
+#   filter(n == 1) %>% 
+#   # filter(!(study == 'FACOMS' & n==1)) %>% 
+#   arrange(sjid, paramcd, avisitn) %>% ungroup %>% select(study) %>% table
+
 # remove non-ambulatory t25fw ---------------------------------------------
 
 # need to be kept
-# dt. %>% 
+# dt. %>%
 #   filter ((paramcd == 'w25.i' & amb == 'non-amb.')) %>%
-#   filter (!(paramcd == 'w25.iu' & amb == 'non-amb.')) 
+#   filter (!(paramcd == 'w25.iu' & amb == 'non-amb.'))
 
 # save baseline NOT by amb ----------------------------------------------------
 # changed 26.03.2021
@@ -74,8 +106,8 @@ base <- dt. %>%
   # filter  ( !is.na(amb)) %>% # should affect no pne at BL
   group_by( study, sjid, paramcd ) %>% # baseline by-amb!!
   filter  ( avisitn == min ( avisitn ) ) %>%
-  group_by(sjid, paramcd) %>% 
-  arrange(sjid, paramcd) %>% 
+  group_by( study, sjid, paramcd) %>% 
+  arrange ( study, sjid, paramcd) %>% 
   rename  ( bl.age = age, bl = aval ) %>%
   ungroup %>% 
   select  ( study, sjid, paramcd, bl, bl.age)
@@ -141,12 +173,12 @@ dt.bl <- dt.long %>%
   filter( avisitn == min(avisitn) ) %>% 
   ungroup
 
-dt.bl %>% group_by(sjid) %>% filter(n()>1) %>% arrange()
+# dt.bl %>% group_by(sjid) %>% filter(n()>1) %>% arrange()
 
 # add subgroups and follow up stats ---------------------------------------
 
-med.bl.age    <- median(dt.bl$bl.age)  
-med.bl.FARS.E <- median(dt.bl$FARS.E, na.rm=T)  
+med.bl.age    <- median((dt.bl %>% filter(study == 'FACHILD'))$bl.age)  
+med.bl.FARS.E <- median((dt.bl %>% filter(study == 'FACHILD'))$FARS.E, na.rm=T)  
 
 dt.bl %<>% 
   mutate(med.age    = case_when(
@@ -157,7 +189,6 @@ dt.bl %<>%
     FARS.E > med.bl.FARS.E ~ paste('FARS.E >', round(med.bl.FARS.E,1)),
     FARS.E < med.bl.FARS.E ~ paste('FARS.E <', round(med.bl.FARS.E,1)))
     )
-
 
 dt.bl %<>% 
   left_join(demo.) %>% 
