@@ -24,6 +24,25 @@ dt. <- bind_rows(
     dt. %>% filter(study == 'FACOMS') %>% filter(!(sjid %in% sjids.FACHILD)) %>% filter(avisitn<=4)
     )
 
+demo. <- .dd.FA('demo') %>% 
+  filter( sjid %in% dt.$sjid ) %>% 
+  filter( study %in% c('FACHILD', 'FACOMS')) %>% 
+  mutate( study = ifelse(sjid %in% sjids.FACHILD, 'FACHILD', 'FACOMS')) %>% 
+  select( study, site, sjid, sex, gaa1, symp, pm, birthdt )
+
+# manual data changes -----------------------------------------------------
+# remove unsuitable FACOMS pts 
+
+dt. %<>% 
+  filter(sjid != 4637) # severe pm (del exon 5, no FARS data)
+
+# data entry errors 
+
+dt. %<>% 
+  mutate(adt = if_else(study == 'FACHILD' & sjid == 5136 & avisitn == 4, as.Date('2021-02-05'), adt)) %>% 
+  mutate(adt = if_else(study == 'FACOMS'  & sjid == 54   & avisitn == 4, as.Date('2006-12-05'), adt))
+
+
 # remove unable from timedM and add unable-pars --------------------------
 
 dt. %<>% 
@@ -33,13 +52,7 @@ dt. %<>%
     dt. %>% filter(paramcd %in% c('hpt.i', 'w25.i')) %>% filter(unable == F)
   )
 
-# data entry errors -------------------------------------------------------
-
-dt. %<>% 
-  mutate(adt = if_else(study == 'FACHILD' & sjid == 5136 & avisitn == 4, as.Date('2021-02-05'), adt)) %>% 
-  mutate(adt = if_else(study == 'FACOMS'  & sjid == 54   & avisitn == 4, as.Date('2006-12-05'), adt))
-
-# adjust visit numbers from FACOMS to FACHILD order -------------------------
+# adjust visit numbers from FACOMS to FACHILD version -------------------------
 
 dt. <- dt. %>% 
   filter(study == 'FACOMS') %>% 
@@ -50,70 +63,54 @@ dt. <- dt. %>%
   # ungroup %>% select(avisitn) %>% table
   bind_rows(
     dt. %>% filter(study == 'FACHILD')
-  )
+  ) %>% 
+  ungroup
 
 table(dt.$avisitn, dt.$study)
 
-# restrict ages -----------------------------------------------------------
+# fix alternating visit dates ---------------------------------------------
+# code to check what happens
+# dt. %>% 
+#   # filter(study == 'FACHILD') %>%
+#   # filter(sjid == 4752) %>%
+#   # ggplot()+geom_point()+geom_line(aes(group = paramcd))+
+#   # aes(x = (as.numeric(adt-min(adt))/365.25), y = paramcd, color = factor(avisitn))
+#   # filter  ( !(sjid %in% c(4237, 4633, 4752)) ) %>%  # these are checked ok
+#   # filter  ( !(sjid %in% c(107)) ) %>%   # not ok, but don't matter
+#   group_by( study, sjid, avisitn ) %>% 
+#   mutate  ( diff = min(adt)-adt ) %>% 
+#   arrange ( -abs(diff ))
+
+dt. %<>%
+  group_by( study, sjid, avisitn ) %>%
+  mutate  ( adt = min(adt) )
+
+# control age range -----------------------------------------------------------
 
 dt. %<>% 
   .add.time(keepadt = T)
 
-dt. %>% 
-  ungroup %>% filter(study == 'FACHILD') %>%  
-  select( age ) %>% 
+dt. %>% ungroup %>% filter(study == 'FACHILD') %>% select( age ) %>% 
   range()
 
 dt. %<>% 
   filter(age < 21.5)
 
-# FACHILD min age is 17.9
+# FACHILD maximum minimal age is 17.9
 dt. %<>% 
   group_by(study, sjid) %>% 
   filter(min(age)<18) %>% 
   ungroup
 
-# reduce patients ---------------------------------------------------------
+# fix demo. ---------------------------------------------------------------
 
-# save fpf, hpf, unable (only from min date per visit)
-dt.tmp <-  dt. %>% 
-  group_by( study, sjid, avisitn ) %>% 
-  mutate( adt = min(adt)) %>%
-  mutate( age = min(age)) %>% 
-  select( study, sjid, avisitn, adt, paramcd, fpf, hpf, unable) %>% 
-  ungroup
-  
-dt. %<>% 
-  select(-c(age, adt, fpf, hpf, unable)) %>% 
-  filter(!is.na(aval))
-  
-dt. %<>% 
-  spread(paramcd, aval) %>%
-  # filter(is.na(mFARS)) %>%
-  # filter(study == 'FACHILD') %>% group_by(sjid) %>% filter(n()>1)
-  group_by(sjid) %>% 
-  mutate(fu_v = n()) %>% 
-  ungroup
-
-dt. %>%
-  group_by(study, fu_v) %>% 
-  summarise(n=n()) %>% 
-  spread(fu_v, n)
-
-dt. %<>% 
-  gather(paramcd, aval, pars.) %>% 
-  filter(!is.na(aval))
-
-dt. %<>% 
-  left_join(dt.tmp) %>% 
-  select(study, sjid, avisitn, adt, fpf, hpf, fu_v, paramcd, unable, aval)
+demo. <- dt. %>% 
+  select(study, sjid) %>% 
+  unique %>% 
+  left_join(demo. %>% select(-study)) %>% 
+  select(study, sjid, everything())
 
 # factor labels -----------------------------------------------------------
-
-demo. <- .dd.FA('demo') %>% 
-  filter( sjid %in% dt.$sjid ) %>% 
-  filter( study %in% c('FACHILD', 'FACOMS')) %>% 
-  mutate( study = ifelse(sjid %in% sjids.FACHILD, 'FACHILD', 'FACOMS'))
 
 dt. %<>% 
   mutate(paramcd = factor(paramcd, pars.)) %>% 
@@ -122,10 +119,9 @@ dt. %<>%
 dt. %<>% 
   filter(sjid %in% demo.$sjid)
 
-rm(pars., params.)
-
 # add steps ---------------------------------------------------------------
 # 5183/BL has fars data in FACOMS, but not in FACHILD  
+
 steps <- .dd.FA('steps', c = T) %>% 
   # filter(study == 'FACHILD') %>% 
   bind_rows(
@@ -149,15 +145,7 @@ dt. %<>%
 
 rm(steps)
 
-# remove non-ambulatory t25fw ---------------------------------------------
-
-# need to be kept
-# dt. %>%
-#   filter ((paramcd == 'w25.i' & amb == 'non-amb.')) %>%
-#   filter (!(paramcd == 'w25.iu' & amb == 'non-amb.'))
-
-# save baseline NOT by amb ----------------------------------------------------
-# changed 26.03.2021
+# save baseline (regardless of amb) --------------------------------------------
 
 base <- dt. %>%
   # filter  ( !is.na(amb)) %>% # should affect no pne at BL
@@ -169,7 +157,6 @@ base <- dt. %>%
   rename  ( bl = aval ) %>%
   ungroup %>% 
   select  ( study, sjid, paramcd, bl)
-
 
 # calculate changes and intervals (not just for for 4 following visits) --------
 
@@ -188,8 +175,9 @@ chg.all <- dt. %>%
   mutate   ( dev.y = abs( time. - ((avisitn-1)/2) )) %>% 
   select( study, sjid, paramcd, avisitn, amb, cbl, dev.y)
 
-chg.all %<>% 
-  filter(!is.na(cbl))
+# this would only remove people without bl
+# chg.all %<>% 
+#   filter(!is.na(cbl))
 
 # add changes to dt -------------------------------------------------------
 
@@ -205,38 +193,32 @@ dt. %<>%
 
 rm(chg.all, base)
 
-dt.long <- dt.
-
-dt.long %<>% 
+dt. %<>% 
   # mutate(hpf = ifelse(is.na(hpf) | hpf == 'In-Person', 'In-Person', hpf)) %>%
   mutate(hpf = factor(hpf, c('Video', 'Audio Only', 'In-Person'))) 
 
-rm(dt.)
 # . -----------------------------------------------------------------------
 # 12 patients that were unable at something at baseline. used as empty
 # first age/dur during a visit is used (sometimes bbs comes from later)
 
-dt.bl <- dt.long %>% 
+dt.bl <- dt. %>% 
   group_by ( sjid ) %>% 
-  select(-c(param, time., fu_v, bl, adt, unable, dev.y, fpf, hpf, cbl)) %>% 
+  select(-c(param, time., bl, adt, unable, dev.y, fpf, hpf, cbl)) %>% 
   spread( paramcd , aval ) %>% 
   arrange(sjid, avisitn) %>% 
   mutate( 
-    fu       = max(age)-min(age),
-    fu_v     = max(avisitn)-1,
-    bl.age   = min(age)
+    fu     = max(age)-min(age),
+    vc     = n(),
+    bl.age = min(age)
   ) %>%
-  # filter(!(paramcd %in% c('FARS.Am', 'FARS.C'))) %>% 
   group_by( sjid ) %>% 
   filter( avisitn == min(avisitn) ) %>%
   ungroup
 
-# dt.bl %>% group_by(sjid) %>% filter(n()>1) %>% arrange()
-
 # add subgroups and follow up stats ---------------------------------------
 
 dt.bl %<>% 
-  # group_by(study) %>% 
+  group_by(study) %>% 
   mutate(med.age = median(age)) %>% 
   mutate(med.FrE = median(FARS.E, na.rm=T)) %>% 
   mutate(med.age    = case_when(
@@ -249,27 +231,57 @@ dt.bl %<>%
     )
 
 dt.bl %<>% 
-  left_join(demo.) %>% 
-  mutate( pm = ifelse(pm == 0, 0, 1))
+  # select(-pars.) %>% 
+  left_join(demo. %>% select(-birthdt)) %>% 
+  select(study, site, sjid, avisitn, sex, symp, gaa1, pm, everything())
 
-var_label(dt.bl) <- list(symp = 'Age of Onset', pm = 'Point Mutation', gaa1 = 'Repeat Length (short)',
-                       med.age = 'Median Age',
-                       sex = 'Sex',
-                       bl.age  = 'Age (BL)', 
-                       fu = 'Follow Up (years)',
-                       fu_v = 'Follow Up (visits)')
+rm(demo.)
 
-# remove one visit only ---------------------------------------------------
+var_label(dt.bl) <- list(
+  study = 'Study',
+  symp = 'Age of Onset', pm = 'Point Mutation', gaa1 = 'Repeat Length (short)',
+  sex = 'Sex',
+  med.age = 'Age Group',
+  bl.age  = 'Age (BL)',
+  fu = 'Follow Up (years)',
+  vc = 'Visits'
+  )
 
+# inclusion criteria ------------------------------------------------------
 
+dt.group <- dt. %>% 
+  group_by(study, sjid, paramcd) %>% 
+  filter(avisitn == min(avisitn)) %>%
+  filter(paramcd == 'mFARS') %>% 
+  mutate(excl = ifelse( aval< 15, 'mFARS<20', 'ok')) %>% 
+  mutate(excl = ifelse( age < 8 , 'age<8'   , excl   )) %>%
+  ungroup %>% 
+  select(study, sjid, excl)
 
+# fix missing ones
 
+dt.bl %<>% 
+  left_join(dt.group) %>% 
+  mutate( amb    = ifelse( sjid == 4844 , 'ambulatory'   , amb   )) %>% # no doubt. 
+  mutate( excl   = ifelse( age  < 8     , 'age<8'        , excl  )) %>% 
+  mutate( vis    = ifelse( vc   == 1    , 'no follow up' , 'ok'  )) 
 
+# have one hierarchical one
+# all -> excl.1 vis -> excl <8y -> mFARS < 20 -> excl non-amb. 
+dt.bl %<>% 
+  mutate( group  = excl ) %>% 
+  mutate( group  = ifelse( vc == 1, 'no follow up', group)) %>% 
+  mutate( group  = ifelse( group == 'ok' & amb != 'ambulatory', 'non-amb.', group )) %>%
+  mutate( group = factor(group, c('no follow up', 'age<8', 'mFARS<20', 'non-amb.','ok')))
+# %>% 
+#   select( group ) %>% table
 
 # write -------------------------------------------------------------------
 
 dt.bl %>% 
   saveRDS ( 'DATA derived/dt.bl.rds' )
 
-dt.long %>% 
+dt. %>% 
   saveRDS ( 'DATA derived/dt.long.rds' )
+
+rm(pars., params.)
