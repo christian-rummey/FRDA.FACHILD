@@ -19,7 +19,8 @@ theme_set(
     .box
     )
 
-dt.long   <- readRDS('DATA derived/dt.long.rds')
+dt.long   <- readRDS('DATA derived/dt.long.rds') %>% 
+  left_join(readRDS('DATA derived/dt.bl.rds') %>% select(sjid, amb.bl, med.FrE, med.age))
 
 dt.long %<>%
   filter(!grepl('.iu', paramcd)) %>% droplevels %>% 
@@ -27,7 +28,7 @@ dt.long %<>%
   left_join(
     readRDS('DATA derived/dt.bl.rds') %>% 
       rename(amb.bl = amb) %>%  
-      select(sjid, amb.bl, med.age, med.FARS.E)
+      select(sjid, amb.bl, med.age, med.FrE)
     ) %>%
   mutate(avisit = factor(avisitn)) %>% 
   select(study, sjid, avisitn, avisit, time., fpf, hpf, paramcd, param, aval, cbl, everything())

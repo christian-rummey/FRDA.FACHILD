@@ -94,3 +94,16 @@ read_pptx ( '../Templates/CR.template.pptx' ) %>%
   #   newpage = F ) ), location = ph_location_type( type = "body" , id = 1) ) %>%
   print ( target = paste('Changes.Slopes.', gsub(":","-", Sys.time()), ".pptx", sep="") )
 
+
+t1 %>% 
+  filter(param %in% c('Timed up and Go (1/s)', 'Timed 25 Foot Walk (m/s)', '9 Hole Peg Test (1/min)','Berg Balance Scale')) %>% 
+  ggplot()+geom_pointrange()+
+  aes(x = estimate)+aes(shape = intervals)+
+  aes(xmin = conf.low, xmax = conf.high)+
+  aes(y = intervals)+
+  facet_wrap(~param, ncol = 1, scales = 'free_x')+
+  theme_minimal(base_size = 16)+
+  geom_vline(xintercept = 0)+
+  # geom_text(aes(label= paste ( 'p = ', sprintf('%.3g',p.value))), x = -0)+
+  .box+
+  

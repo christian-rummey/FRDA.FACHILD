@@ -19,7 +19,8 @@ theme_set(
     .box
     )
 
-dt.long   <- readRDS('DATA derived/dt.long.rds')
+dt.long   <- readRDS('DATA derived/dt.long.rds') %>% 
+  filter(study == 'FACHILD')
 
 dt.long %<>%
   filter(!grepl('.iu', paramcd)) %>% droplevels %>% 
@@ -27,20 +28,23 @@ dt.long %<>%
   left_join(
     readRDS('DATA derived/dt.bl.rds') %>% 
       rename(amb.bl = amb) %>%  
-      select(sjid, amb.bl, med.age, med.FARS.E)
+      select(study, sjid, amb.bl, med.age, med.FARS.E)
     ) %>%
   mutate(avisit = factor(avisitn)) %>% 
   select(study, sjid, avisitn, avisit, time., fpf, hpf, paramcd, param, aval, cbl, everything())
 
 levels(dt.long$avisit) <- c('BL', '6m', '1y', '18m','2y','3y')
+with(dt.long, table(avisit, avisitn))
+
+dt.long %>% filter(is.na(aval))
 
 # descriptive changes -----------------------------------------------------
 
 dt.s <- dt.long %>% 
-  filter(avisitn != 6) %>% 
-  group_by(paramcd, param, avisit, avisitn ) %>% 
+  # filter(avisitn != 6) %>% 
+  group_by(study, paramcd, param, avisit, avisitn ) %>% 
   filter(!is.na(cbl)) %>% 
-  summarise(n = n(), m = mean( cbl ), s = sd(cbl )) %>% 
+  summarise(n = n(), m = mean( cbl ), s = sd(cbl ), SRM = abs(m/s)) %>% 
   group_by(paramcd, param) %>% mutate(height = min(m-max(s)))
 
 .long.plot.descr <- function (df, parids, title) {
@@ -52,7 +56,7 @@ dt.s <- dt.long %>%
     geom_text ( aes(label = n , y = height), size = 3 )+
     geom_hline( yintercept = 0, linetype = 'dashed')+
     facet_wrap( ~ param, scale = 'free_y')+
-    scale_x_discrete(labels = c('BL', '6m', '1y', '18m', '2y'))+
+    scale_x_discrete(labels = c('BL', '6m', '1y', '18m', '2y','3y'))+
     .leg_ll+
     xlab('Visit')+
     ylab('Mean Change (SD)')+
@@ -62,9 +66,9 @@ dt.s <- dt.long %>%
 # by subgroups -----------------------------------------------------------
 
 dt.ss <- bind_rows(
-  dt.long %>% filter(avisitn != 6) %>% mutate(group = amb.bl),
-  dt.long %>% filter(avisitn != 6) %>% mutate(group = med.age),
-  dt.long %>% filter(avisitn != 6) %>% mutate(group = med.FARS.E)
+  dt.long %>% filter(avisitn != 6) %>% filter(!is.na( amb.bl    )) %>% mutate(group = amb.bl),
+  dt.long %>% filter(avisitn != 6) %>% filter(!is.na( med.age   )) %>% mutate(group = med.age),
+  dt.long %>% filter(avisitn != 6) %>% filter(!is.na( med.FARS.E)) %>% mutate(group = med.FARS.E)
 )
 
 dt.ss %<>% 
@@ -74,7 +78,8 @@ dt.ss %<>%
   group_by(paramcd, param, group, avisit, avisitn ) %>% 
   filter(!is.na(cbl)) %>% 
   summarise(n = n(), m = mean( cbl ), s = sd(cbl )) %>% 
-  group_by(paramcd, param, group) %>% 
+  mutate(s = ifelse(is.na(s), 0, s)) %>% 
+  group_by(paramcd, param, group) %>%
   mutate(height = min(m-max(s, na.rm=T), na.rm=T))
 
 .long.plot.descr.sub <- function (df, groups, parids, title) {
@@ -92,13 +97,12 @@ dt.ss %<>%
     geom_text ( aes(label = n , y = height), size = 3,position = position_dodge(width = 0.6) )+
     geom_hline( yintercept = 0, linetype = 'dashed')+
     facet_wrap( ~ param, scale = 'free_y')+
-    scale_x_discrete(labels = c('BL', '6m', '1y', '18m', '2y'))+
+    scale_x_discrete(labels = c('BL', '6m', '1y', '18m', '2y','3y'))+
     .leg_lr+
     xlab('Visit')+
     ylab('Mean Change (SD)')+
     ggtitle(title)
   }
-
 
 read_pptx ( '../Templates/CR.template.pptx' ) %>%
   add_slide ( layout = 'F', master = 'CR')  %>%

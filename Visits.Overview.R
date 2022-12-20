@@ -1,25 +1,49 @@
 
-# read data ---------------------------------------------------------------
-
 rm(list=ls())
+
+
+# trying something new ----------------------------------------------------
+
+branded_colors <- list(
+  "blue"   = "#00798c",
+  "red"    = "#d1495b",
+  "yellow" = "#edae49",
+  "green"  = "#66a182",
+  "navy"   = "#2e4057", 
+  "grey"   = "#8d96a3"
+)
+
+# read data ---------------------------------------------------------------
 
 require('labelled')
 source('list.pars.R')
 
 dt.       <- readRDS('DATA derived/dt.long.rds')
-visstat   <- .ds.FACHILD('visstat')  
+dt.bl     <- readRDS('DATA derived/dt.bl.rds')
+visstat   <- .ds.FACHILD('visstat')
+
+# .rd.FACHILD('exttw') %>% filter(howperf != 1)
+# .rd.FACHILD('bbs')   %>% filter(howperf != 1)
+# .rd.FACHILD('t25fw') %>% filter(howperf != 1)
+# .rd.FACHILD('tug')   %>% filter(howperf != 1)
+
+# switches for output -----------------------------------------------------
+
+# dt. %<>% 
+#   left_join(dt.bl %>% select(study, sjid, vc)) %>% 
+#   # filter(study == 'FACHILD') %>% 
+#   filter(vc!=1) %>% 
+#   droplevels()
+
+# statistics about excluded individuals (one visit only) ------------------
 
 dt. %>% 
-  
+  left_join(dt.bl %>% select(study, sjid, vc)) %>%
   ungroup %>% 
+  filter(vc == 1) %>% 
   select(study, sjid, avisitn) %>% 
-  unique
-
-.rd.FACHILD('exttw') %>% filter(howperf != 1)
-.rd.FACHILD('bbs')   %>% filter(howperf != 1)
-.rd.FACHILD('t25fw') %>% filter(howperf != 1)
-.rd.FACHILD('tug')   %>% filter(howperf != 1)
-
+  unique() %>% 
+  select(study) %>% table
 
 # follow up type barchart ----------------------------
 
@@ -29,30 +53,34 @@ levels(dt.$avisitn) <- c('BL','6m','1y','1.5y','2y', '3y')
 
 dt <- dt. %>%
   ungroup %>% select  ( study, sjid, avisitn ) %>%
-  group_by( study, sjid, avisitn ) %>%
-  unique() %>% #filter(n()>1 )
-  ungroup %>% 
+  unique() %>% 
+  group_by(study, sjid) %>% 
+  group_by( study ) %>%
   mutate(N   = length(unique(sjid))) %>% 
   group_by( study, sjid, avisitn ) %>%
-  group_by(avisitn, N) %>% 
+  group_by( study, avisitn, N) %>% 
   count() %>% 
-  mutate(pct = round(100*n/(N), 0))
+  mutate(pct = round(100*n/(N), 0)) %>% 
+  left_join(
+    data.frame(avisitn = levels(dt.$avisitn), time = c(0, 0.5,1, 1.5, 2, 3))
+  )
 
-p1 <- dt %>% 
-  ggplot()+geom_col()+
+p1 <- dt %>%
+  filter(study == 'FACHILD') %>% 
+  ggplot()+geom_col(position = position_dodge2(width = 1))+
   # aes(x = avisitn, y = pct) +
-  aes(x = c(0, 0.5,1, 1.5, 2, 3), y = pct) +
+  aes(x = time, y = pct) +
+  # aes(fill = study)+scale_fill_manual(values = c("#00798c","#edae49"))+
   scale_x_continuous(breaks = c(0,0.5,1, 1.5, 2, 3), labels = c('BL','6m','1y','1.5y','2y','3y'))+
-  geom_text(aes(label = paste(n,'\n(',pct,'%)', sep = '')), nudge_y = -5, color = 'white')+
+  geom_text(aes(label = paste(n,'\n(',pct,'%)', sep = '')), nudge_y = -4, color = 'white')+
+  # geom_text(aes(label = paste(n,'\n(',pct,'%)', sep = '')), color = 'black')+
   # coord_flip(ylim = c(0,112))+
-  # ggrepel::geom_text_repel(aes(label = paste0( round( pct,0 ), '%')), direction = 'x', nudge_y = 5)+
-  # ggtitle('Visits per Patient')+theme(plot.title = element_text(hjust = 0.5))+
   theme_minimal(base_size = 16)+
   theme(panel.grid.major.x = element_blank(), panel.grid.major.y = element_blank())+
+  facet_wrap(~study, ncol = 1)+
   xlab('Follow Up Visit')+
   ylab('Subjects (%)')
-
-p1
+p1 
 
 # same from visstat -------------------------------------------------------
 # 5138 BL is missing form visstat (V3 is listed as not done )
@@ -140,11 +168,11 @@ p3 <- dt. %>%
   # mutate(hpf = ifelse( is.na(hpf), 'filler', as.character(hpf))) %>% 
   select( -fpf ) %>% 
   filter  ( !grepl('.iu', paramcd) ) %>% 
-  select  ( study, sjid, avisitn, param, hpf) %>% 
-  group_by( study, sjid, avisitn, param) %>%
+  select  ( study, sjid, avisitn, paramcd, hpf) %>% 
+  group_by( study, sjid, avisitn, paramcd) %>%
   filter  ( hpf %in% c('Audio Only','Video')) %>% 
   ggplot()+geom_bar()+
-  aes(x = param)+
+  aes(x = paramcd)+
   geom_text(stat='count', aes(label=..count..), hjust=2, color = 'white')+
   coord_flip()+
   theme_minimal(base_size = 16)

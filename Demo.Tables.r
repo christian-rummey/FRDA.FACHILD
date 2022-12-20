@@ -16,7 +16,7 @@ options(digits = 5)
 dt.bl %<>% 
   # filter(vc>1) %>% 
   # filter(mFARS>19.9) %>% 
-  # filter(study == 'FACHILD') %>% 
+  filter(study == 'FACHILD') %>%
   droplevels
 
 # demo.table all --------------------------------------------------------------
@@ -45,7 +45,7 @@ dt.bl %<>%
 
 .tab1.sub <- function (df, strata = NA )  {
   tb <- tableone::CreateTableOne(
-    vars       = c('sex','symp', 'gaa1', 'pm', 'bl.age', 'vc', 'amb', 'mFARS', 'mFARS20', 'FARS.E','ADL'),
+    vars       = c('sex','symp', 'gaa1', 'pm', 'bl.age', 'vc', 'fu',  'amb', 'mFARS', 'mFARS20', 'FARS.E','ADL'),
     factorVars = c('sex','amb', 'pm'),
     strata     = strata,
     test = F,
@@ -66,7 +66,22 @@ dt.bl %<>%
   return (tb)
 }
 
-.tab1.sub(dt.bl, strata = c('group', 'study'))
+dt.bl %<>% 
+  left_join(.dd.FA('demo.l') %>% select(sjid, rfstdt)) %>%
+  group_by(study) %>% 
+  mutate(enrol.med = median(rfstdt)) %>% 
+  mutate(study.3 = ifelse(study == 'FACOMS', ifelse(rfstdt < enrol.med, 'FACOMS.e','FACOMS.l'), 'FACHILD'))
+
+.tab1.sub( dt.bl, strata = c('group', 'study') )
+.tab1.sub( dt.bl %>% filter(group == 'ok'), strata = c('study.3') )
+.tab1.sub( 
+  dt.bl %>% 
+    filter(group == 'ok'), strata = c('study') )
+.tab1.sub( 
+  dt.bl %>% 
+    filter(group == 'ok'), strata = 'group' )
+
+
 
 read_pptx( '../Templates/CR.template.pptx' ) %>%
   add_slide   ( layout = 'TTE', master = 'CR') %>%

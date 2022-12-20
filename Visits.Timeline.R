@@ -27,6 +27,7 @@ virt.vis <- dt. %>%
   droplevels
 
 p1 <- dt. %>%
+  filter(study == 'FACHILD') %>% 
   ggplot()+
   aes(x = adt, y = sjid)+
   aes(group = sjid, color = site)+
@@ -37,11 +38,13 @@ p1 <- dt. %>%
   theme(panel.grid.minor.y = element_blank(), panel.grid.major.y = element_blank())+
   theme(axis.text.y = element_blank())+.leg_tl+
   xlab('Date')+ylab('Subjects')+
+  facet_wrap(~study)+
   ggtitle('Follow-up Timeline')+theme(plot.title = element_text(hjust = 0.5))
 
 p1
 
 p2 <- dt. %>%
+  filter(study == 'FACHILD') %>% 
   left_join(virt.vis) %>% mutate(virtual = ifelse(is.na(virtual), 'In-Person', virtual)) %>% 
   ggplot()+
   geom_point( size = 2 ) + geom_line( ) +
@@ -53,6 +56,7 @@ p2 <- dt. %>%
   theme(panel.grid.minor.y = element_blank(), panel.grid.major.y = element_blank())+
   theme(axis.text.y = element_blank())+.leg_tl+
   xlab('Date')+ylab('Subjects')+
+  facet_wrap(~study)+
   ggtitle('Follow-up Timeline')+theme(plot.title = element_text(hjust = 0.5))+
   geom_vline(xintercept = as.Date('2020-03-01'))+
   geom_vline(xintercept = as.Date('2017-10-10'), linetype = 'dashed', size = 1)+
