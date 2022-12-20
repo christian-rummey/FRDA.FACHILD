@@ -45,12 +45,12 @@ dt. %<>%
 
 # remove unable from timedM and add unable-pars --------------------------
 
-dt. %<>% 
-  mutate(paramcd = ifelse(paramcd == 'hpt.i', 'hpt.iu', paramcd)) %>% 
-  mutate(paramcd = ifelse(paramcd == 'w25.i', 'w25.iu', paramcd)) %>% 
-  bind_rows(
-    dt. %>% filter(paramcd %in% c('hpt.i', 'w25.i')) %>% filter(unable == F)
-  )
+# dt. %<>% 
+#   mutate(paramcd = ifelse(paramcd == 'hpt.i', 'hpt.iu', paramcd)) %>% 
+#   mutate(paramcd = ifelse(paramcd == 'w25.i', 'w25.iu', paramcd)) %>% 
+#   bind_rows(
+#     dt. %>% filter(paramcd %in% c('hpt.i', 'w25.i')) %>% filter(unable == F)
+#   )
 
 # adjust visit numbers from FACOMS to FACHILD version -------------------------
 
@@ -88,7 +88,7 @@ dt. %<>%
 # control age range -----------------------------------------------------------
 
 dt. %<>% 
-  .add.time(keepadt = T)
+  .add.time ( keepadt = T  )
 
 dt. %>% ungroup %>% filter(study == 'FACHILD') %>% select( age ) %>% 
   range()
@@ -113,8 +113,9 @@ demo. <- dt. %>%
 # factor labels -----------------------------------------------------------
 
 dt. %<>% 
-  mutate(paramcd = factor(paramcd, pars.)) %>% 
-  mutate(param   = factor(paramcd, pars., labels = params.))
+  mutate(paramcd = factor(paramcd, pars.)) 
+# %>% 
+#   mutate(param   = factor(paramcd, pars., labels = params.))
 
 dt. %<>% 
   filter(sjid %in% demo.$sjid)
@@ -202,16 +203,17 @@ dt. %<>%
 # first age/dur during a visit is used (sometimes bbs comes from later)
 
 dt.bl <- dt. %>% 
-  group_by ( sjid ) %>% 
-  select(-c(param, time., bl, adt, unable, dev.y, fpf, hpf, cbl)) %>% 
-  spread( paramcd , aval ) %>% 
-  arrange(sjid, avisitn) %>% 
+  group_by ( study, sjid ) %>% 
+  select ( study, sjid, amb, avisitn, age, time., paramcd, aval) %>% 
+  # select ( -c(param, bl, adt, unable, dev.y, fpf, hpf, cbl, -w25)) %>% 
+  spread ( paramcd , aval ) %>% 
+  arrange(study, sjid, avisitn) %>% 
   mutate( 
     fu     = max(age)-min(age),
     vc     = n(),
     bl.age = min(age)
   ) %>%
-  group_by( sjid ) %>% 
+  group_by( study, sjid ) %>% 
   filter( avisitn == min(avisitn) ) %>%
   ungroup
 
@@ -232,8 +234,8 @@ dt.bl %<>%
 
 dt.bl %<>% 
   # select(-pars.) %>% 
-  left_join(demo. %>% select(-birthdt)) %>% 
-  select(study, site, sjid, avisitn, sex, symp, gaa1, pm, everything())
+  left_join( demo. %>% select(-birthdt) ) %>% 
+  select   ( study, site, sjid, avisitn, sex, symp, gaa1, pm, everything() ) 
 
 rm(demo.)
 
@@ -250,13 +252,13 @@ var_label(dt.bl) <- list(
 # inclusion criteria ------------------------------------------------------
 
 dt.group <- dt. %>% 
-  group_by(study, sjid, paramcd) %>% 
-  filter(avisitn == min(avisitn)) %>%
-  filter(paramcd == 'mFARS') %>% 
-  mutate(excl = ifelse( aval< 15, 'mFARS<20', 'ok')) %>% 
-  mutate(excl = ifelse( age < 8 , 'age<8'   , excl   )) %>%
+  group_by( study, sjid, paramcd ) %>% 
+  filter( avisitn == min(avisitn) ) %>%
+  filter( paramcd == 'mFARS') %>% 
+  mutate( excl = ifelse( aval< 15, 'mFARS<20', 'ok' ) ) %>% 
+  mutate( excl = ifelse( age < 8 , 'age<8'   , excl ) ) %>%
   ungroup %>% 
-  select(study, sjid, excl)
+  select( study, sjid, excl )
 
 # fix missing ones
 
