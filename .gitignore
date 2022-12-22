@@ -40,7 +40,8 @@ vignettes/*.pdf
 
 # CR
 # Ignore MD outputs
+.gitignore
 *.html
 *.pptx
 DATA derived/
-R.FACHILD.Rproj
+*.Rproj
