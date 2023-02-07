@@ -96,7 +96,8 @@ dt. %<>%
 # time variable -----------------------------------------------------------
 
 dt. %<>%
-  group_by(study, sjid, amb) %>%
+  # group_by(study, sjid, amb) %>%
+  group_by(study, sjid ) %>%
   mutate( time. = as.numeric( adt - min(adt) ) / 365.25) %>%
   # .add.time( tm = 'age', keepadt = T) %>% 
   # filter ( is.na(amb) ) %>% ### !!!%>% 
@@ -121,9 +122,9 @@ dt. %<>%
   left_join( base, by = c("study", "sjid", "paramcd") ) %>% 
   group_by ( study, sjid, paramcd ) %>% 
   arrange  ( study, sjid, paramcd, avisitn ) %>%
-  mutate   ( cbl   = aval - bl ) %>% 
-  mutate   ( dev.y = abs( time. - avisitn ) ) %>% 
-  select( study, sjid, adt, avisitn, amb, age, time., paramcd, bl, aval, cbl, dev.y )
+  mutate   ( cbl        = aval - bl ) %>% 
+  mutate   ( window.dev = abs( time. - avisitn ) ) %>% 
+  select( study, sjid, adt, avisitn, amb, age, time., paramcd, bl, aval, cbl, window.dev )
 
 # follow-up characteristics for BL -----------------------------------------
 # 12 patients that were unable at something at baseline. used as empty
