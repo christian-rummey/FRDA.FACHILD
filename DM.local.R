@@ -261,7 +261,7 @@ dt.subs <- dm %>%
   mutate ( itt.FRE = ifelse( FARS.E > 8 , T, F )) %>% 
   mutate ( itt.FEx = ifelse( FARS.E > 8 & FARS.E < 32, T, F )) %>% 
   mutate ( itt.mFR = ifelse( mFARS  > 19, T, F )) %>% 
-  select(sjid, starts_with('itt.'))
+  select( sjid, starts_with('itt.'))
 
 
 dt.pop %>% 
