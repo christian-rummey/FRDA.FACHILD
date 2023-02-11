@@ -14,6 +14,13 @@ source('list.pars.R')
   return (df)
 }
 
+theme_set(
+  theme_minimal(base_size = 16)+
+    theme( panel.grid.minor.y = element_blank(), panel.grid.minor.x = element_blank())+
+    # theme( axis.text.y = element_blank())+
+    .leg_tl
+  )
+
 # data --------------------------------------------------------------------
 
 dt. <- bind_rows(
@@ -81,11 +88,15 @@ dt. %<>%
   filter(sjid %in% demo.$sjid)
 
 # add steps ---------------------------------------------------------------
+# only baseline!
+
+bl.steps <- .dd.atx('steps', c = T) %>% 
+  filter(avisitn==0) %>% 
+  select(study, sjid, amb)
 
 dt. %<>%
-  left_join( 
-    .dd.atx('steps', c = T) %>% filter(!is.na(adt)) %>% select(study, sjid, avisitn, fds.act, amb)
-    ) 
+  left_join( bl.steps ) %>% 
+  filter(!is.na(amb))
 
 # still some are NA -------------------------------------------------------
 # scafis' remove there
@@ -101,7 +112,7 @@ dt. %<>%
   mutate( time. = as.numeric( adt - min(adt) ) / 365.25) %>%
   # .add.time( tm = 'age', keepadt = T) %>% 
   # filter ( is.na(amb) ) %>% ### !!!%>% 
-  select(study, sjid, adt, avisitn, amb, age, time., paramcd, aval)
+  select(study, sjid, adt, avisitn, bl.amb = amb, age, time., paramcd, aval)
 
 # save baseline (regardless of amb) --------------------------------------------
 
@@ -109,7 +120,7 @@ base <- dt. %>%
   # filter  ( !is.na(amb)) %>% # should affect no pne at BL
   group_by( study, sjid, paramcd ) %>% # baseline by-amb!!
   # filter  ( avisitn == min ( avisitn ) ) %>%
-  filter  ( avisitn == 0 ) %>%
+  filter  ( avisitn == 0 ) %>% 
   group_by( study, sjid, paramcd) %>% 
   arrange ( study, sjid, paramcd) %>% 
   rename  ( bl = aval ) %>%
@@ -124,7 +135,7 @@ dt. %<>%
   arrange  ( study, sjid, paramcd, avisitn ) %>%
   mutate   ( cbl        = aval - bl ) %>% 
   mutate   ( window.dev = abs( time. - avisitn ) ) %>% 
-  select( study, sjid, adt, avisitn, amb, age, time., paramcd, bl, aval, cbl, window.dev )
+  select( study, sjid, adt, avisitn, bl.amb, age, time., paramcd, bl, aval, cbl, window.dev )
 
 # follow-up characteristics for BL -----------------------------------------
 # 12 patients that were unable at something at baseline. used as empty
@@ -133,7 +144,7 @@ dt. %<>%
 dt.bl <- dt. %>%
   group_by ( study, sjid, avisitn ) %>% 
   mutate_at( vars('age', 'time.'), min ) %>% 
-  select   ( study, sjid, avisitn, age, amb, paramcd, aval) %>%
+  select   ( study, sjid, avisitn, age, bl.amb, paramcd, aval) %>%
   mutate_at( 'age' , round, 2) %>% 
   spread   ( paramcd , aval ) %>% 
   group_by ( study, sjid ) %>% 
@@ -150,9 +161,8 @@ dt.bl <- dt. %>%
 dm <- dt.bl %>% 
   # select(-pars.) %>% 
   left_join( demo. %>% select(-birthdt) ) %>% 
-  mutate   ( amb = ifelse(amb == 'ambulatory', T, F)) %>% 
   select   ( -bl.age ) %>% 
-  select   ( study, site, sjid, avisitn, sex, symp, gaa1, pm, age, fu, visit.count, everything() ) 
+  select   ( study, site, sjid, avisitn, sex, symp, gaa1, pm, bl.age = age, fu, visit.count, everything() ) 
 
 names(dm)
 rm(demo., dt.bl, base)
@@ -209,6 +219,9 @@ dt. %<>%
 dt. %<>% 
   filter( !( sjid == 4774 & avisitn == 4   ) ) %>% 
   filter( !( sjid == 4999 & avisitn == 0.5 ) )
+
+dt. %<>% 
+  filter(age>0)
 
 # write -------------------------------------------------------------------
 
