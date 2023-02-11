@@ -1,26 +1,7 @@
 # setup -------------------------------------------------------------------
 
 rm(list=ls())
-
-require('labelled')
-source('list.pars.R')
-
-.vnames <- function ( df ) {
-  df %<>%
-    left_join(.rt('../DATA other/FACHILD.FACOMS.vnames.txt')) %>%
-    mutate(vname = factor(vname, c('BL','6m','1y','18m','2y','3y','3y+'))) %>%
-    select(study, vname, everything()) %>% 
-    mutate(avisit = vname) %>% 
-    select(-vname)
-  return (df)
-}
-
-theme_set(
-  theme_minimal(base_size = 16)+
-    theme( panel.grid.minor.y = element_blank(), panel.grid.minor.x = element_blank())+
-    # theme( axis.text.y = element_blank())+
-    .leg_tl
-  )
+source('local.settings.R')
 
 # data --------------------------------------------------------------------
 
