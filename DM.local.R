@@ -67,7 +67,7 @@ dt. %<>%
 
 dt. %<>% 
   group_by(study, sjid) %>% 
-  filter((min(age)<18)) %>% 
+  filter( min(age)<18 ) %>% 
   ungroup
 
 table(dt.$avisitn, dt.$study)
@@ -97,7 +97,7 @@ dt. %<>%
 dm. %<>% 
   left_join( 
     .dd.atx('steps', c = T) %>% 
-      filter(avisitn==0) %>% 
+      filter(avisitn == 0) %>% 
       select(study, sjid, amb)
     ) %>% 
   filter(!is.na(amb))
@@ -134,18 +134,19 @@ dm. %<>%
 # leave them in for now (so "missing values" stats work)
 
 dt. %<>% 
-  left_join(base)
-# %>% 
-#   filter(!is.na(bl))
+  left_join( base ) %>% 
+  filter   ( !is.na(bl) )
+
 rm(base)
+
 # changes and intervals ---------------------------------------------------
 
 dt. %<>%
   group_by ( study, sjid, paramcd ) %>% 
   arrange  ( study, sjid, paramcd, avisitn ) %>%
   mutate   ( cbl        = aval - bl ) %>% 
-  mutate   ( window.dev = abs( time. - avisitn ) ) %>% 
-  select  ( study, sjid, adt, avisitn, age, time., paramcd, bl, aval, cbl, window.dev )
+  # mutate   ( window.dev = abs( time. - avisitn ) ) %>% 
+  select  ( study, sjid, adt, avisitn, age, time., paramcd, bl, aval, cbl )
 
 # follow-up characteristics for BL -----------------------------------------
 # 12 patients that were unable at something at baseline. used as empty
@@ -192,16 +193,86 @@ dt. %<>%
   mutate(paramcd = factor(paramcd, pars.)) %>%
   droplevels()
 
+# add subgroups, based on all data ----------------------------------------
+
+# age subgroup ------------------------------------------------------------
+
+range(dt.$age)
+
+s.group.age <- dt. %>% ungroup %>%
+  filter( avisitn == 0 ) %>%
+  select(study, sjid, age) %>%
+  unique %>%
+  group_by(sjid) %>% filter(rank(sjid, ties.method ='first')==1) %>% 
+  group_by(study) %>%
+  mutate(value = median (age)) %>%
+  # mutate(s.group.age = ifelse(age >= value, '>', '<')) %>%
+  mutate(s.group.age = ifelse(age >= value, '>= median age', '< median age')) %>%
+  # mutate(s.group.age = paste(s.group.age, round(value,1),'years' )) %>% 
+  select(study, sjid, s.group.age)
+
+# median mFARS subgroups --------------------------------------------------
+
+s.group.mF <- dt. %>% ungroup %>%
+  filter(avisitn == 0, paramcd == 'mFARS') %>%
+  select(study, sjid, mFARS = aval) %>%
+  unique %>%
+  group_by(study) %>%
+  mutate(value = median (mFARS)) %>%
+  # mutate(s.group.mF = ifelse(mFARS >= value, '>', '<')) %>%
+  mutate(s.group.mF = ifelse(mFARS >= value, '>= median mFARS', '< median mFARS')) %>%
+  # mutate(s.group.mF = paste(s.group.mF, round(value,1),'points' )) %>% 
+  select(study, sjid, s.group.mF)
+
+# median FARS.E subgroups -------------------------------------------------
+
+s.group.FE <- dt. %>% ungroup %>%
+  filter(avisitn == 0, paramcd == 'FARS.E') %>%
+  select(study, sjid, FARS.E = aval) %>%
+  unique %>%
+  group_by(study) %>%
+  mutate(value = median (FARS.E)) %>%
+  # mutate(s.group.FE = ifelse(FARS.E >= value, '>', '<')) %>%
+  mutate(s.group.FE = ifelse(FARS.E >= value, '>= median FARS.E', '< median FARS.E')) %>%
+  # mutate(s.group.FE = paste(s.group.FE, round(value,1),'points' )) %>% 
+  select(study, sjid, s.group.FE)
+
+# ambulation subgroups ----------------------------------------------------
+
+s.group.amb <- dm. %>% ungroup %>%
+  select(study, sjid, s.group.amb = amb) %>% 
+  select(study, sjid, s.group.amb) %>%
+  unique
+
+# add subgroups -----------------------------------------------------------
+
+dt. %<>% 
+  left_join( s.group.amb ) %>%
+  left_join( s.group.age ) %>%
+  left_join( s.group.mF  ) %>%
+  left_join( s.group.FE  )
+
 # write -------------------------------------------------------------------
 
 dm. %>% 
   saveRDS ( 'DATA derived/dm.rds' )
 
-dt. %>% 
+dt. %>%
+  left_join(dm. %>% select(study, sjid, bl.amb = amb)) %>% 
+  filter(!is.na(bl.amb)) %>% # checked, is complete
   saveRDS ( 'DATA derived/dt.rds' )
 
 rm(pars., params.)
 
+# adjusted windows --------------------------------------------------------
+
+# dt. %>%
+#   mutate( avisitn.x    = ifelse(time. < 2.25, round(time.*2)/2, round(time.) ) ) %>%
+#   mutate( flag = ifelse(avisitn.x != avisitn, T, F)) %>% 
+#   mutate( avisitn = avisitn.x ) %>% 
+#   mutate( window.dev = abs( time. - avisitn ) ) %>%
+#   mutate( dev.cat    = cut(window.dev, c(0, 0.25, 0.5, 1, 10), labels = c('<3M', '>3M', '>6M', '>1y'), include.lowest = T ) ) %>% 
+#   saveRDS ( 'DATA derived/dt.adj.rds' )
 
 # populations -------------------------------------------------------------
 

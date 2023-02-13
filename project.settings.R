@@ -10,7 +10,7 @@
 }
 
 theme_set(
-  theme_minimal(base_size = 18)+
+  theme_minimal(base_size = 14)+
     theme( panel.grid.minor.y = element_blank(), panel.grid.minor.x = element_blank())+
     # theme( axis.text.y = element_blank())+
     .leg_tl
