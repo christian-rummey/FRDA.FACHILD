@@ -38,10 +38,15 @@ vignettes/*.pdf
 # R Environment Variables
 .Renviron
 
+# not for git
+tmp.*
+
 # CR
 # Ignore MD outputs
 .gitignore
 *.html
 *.pptx
 DATA derived/
+Output/
+sort.work/
 *.Rproj
