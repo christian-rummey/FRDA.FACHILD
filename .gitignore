@@ -40,4 +40,8 @@ vignettes/*.pdf
 
 # not for git
 tmp.*
- %>% %>% %>% %>% 
+*Results/
+DATA derived/
+Output/
+sort.work/
+*.Rproj
