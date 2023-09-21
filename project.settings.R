@@ -10,7 +10,8 @@
 }
 
 theme_set(
-  theme_minimal(base_size = 14)+
+  theme_minimal(base_size = 20)+
+  # theme_minimal(base_size = 14)+
     theme( panel.grid.minor.y = element_blank(), panel.grid.minor.x = element_blank())+
     # theme( axis.text.y = element_blank())+
     .leg_tl
@@ -24,8 +25,8 @@ parlst. <- c('mFARS'                          , 'mFARS',
              'Bulbar (FARS.Am)'               , 'FARS.Am',
              'Timed 25 Foot Walk (m/s)'       , 'w25.i',
              '9 Hole Peg Test (1/min)'        , 'hpt.i',
-             '9 Hole Peg Test, dom. (1/min)'  , 'hpt.id',
-             '9 Hole Peg Test, ndom. (1/min)' , 'hpt.in',
+             # '9 Hole Peg Test, dom. (1/min)'  , 'hpt.id',
+             # '9 Hole Peg Test, ndom. (1/min)' , 'hpt.in',
              # 'Timed 25 Foot Walk (m/s) unable', 'w25.iu',
              # '9 Hole Peg Test (1/min) unable' , 'hpt.iu',
              'Timed up and Go (1/s)'          , 'tug.i',
