@@ -17,84 +17,73 @@ require(emmeans)
 dm.   <- readRDS('DATA derived/dm.rds')
 dt.   <- readRDS('DATA derived/dt.rds')
 
+# parids <- c(1,2,3,4)  # "mFARS"  "FARS.E" "FARS.B" "FARS.C"
+# parids <- c(6,8,9,10) # "w25.i"  "tug.i"   "w1m"     "w6m"
+parids <- c(12,11,1,2) # "w25.i"  "tug.i"   "w1m"     "w6m"
+
+pars..   <- pars.[c(parids)] 
+
+# slide title -------------------------------------------------------------
+
+# title <- 'FARS by Study'
+# title <- 'FARS by ambulation Status'
+# title <- 'FARS by Median Age'
+# title <- 'FARS by Median mFARS'
+# title <- 'FARS by Median FARS E'
+# title <- 'FARS by ambulation Status'
+title <- 'Generic'
+
 # Parameters --------------------------------------------------------------
 
 dt. %<>% 
   # filter( study == 'FACHILD') %>%
-  # filter( paramcd %in% c('mFARS','FARS.E','FARS.B','FARS.C') ) %>% 
-  # filter( paramcd %in% c('w25.i','tug.i','w1m', 'w6m') ) %>%
-  filter( paramcd %in% c('tug.i') ) %>%
-  # filter( paramcd %in% c('ADL','bbs','hpt.i') ) %>% 
+  filter( paramcd %in% pars.. ) %>%
   droplevels()
+
+# dt. %>% 
+#   left_join( .rt('../DATA other/scales.txt') %>% select(paramcd, param) ) %>% 
+#   filter(is.na(param))
 
 # Subgroup ----------------------------------------------------------------
 
 dt.s <- dt. %>% 
-  # mutate( s.group = s.group.FE ) %>% 
-  # mutate( s.group = s.group.mF ) %>% 
-  mutate( s.group = s.group.age ) %>%
-  # mutate( s.group = s.group.amb ) %>%
+  left_join(dm. %>% select(sjid, bl.amb, itt, starts_with('subgroup'))) %>%
+  filter( itt ) %>%
+  # filter( study == 'FACHILD') %>%
+  # filter( bl.amb == 'ambulatory' ) %>%
   mutate  ( s.group = 1) %>%
-  filter( !is.na( s.group ))
-
-# title slide -------------------------------------------------------------
-
-title <- 'F, mF'
-
-# dev < 3M adjusted, plus add > 2y ----------------------------------------
-# legacy 
-
-dt. %<>%
-  group_by( study, sjid, paramcd, avisitn ) %>%
-  # mutate  ( flag.adj = ifelse ( window.dev == min(window.dev), T, F ) ) %>% 
-  # filter  ( !flag.adj ) %>% ungroup %>% select(paramcd) %>% table
-  arrange( study, avisitn, paramcd ) %>%
-  # .vnames %>%
-  # group_by( sjid ) %>% filter(max (window.dev)>0.25) %>% 
-  # filter  ( time. >= 2.25 & time. < 3.5 ) %>%
-  # mutate  ( dev.cat = as.character(dev.cat)) %>% 
-  # mutate  ( dev.cat = ifelse(dev.cat == '>3M' & time. >  2.25 & time. < 2.5 , '>3M.ok', dev.cat )) %>%
-  # mutate  ( dev.cat = ifelse(dev.cat == '>3M' & time. >= 2.5  & time. < 3.5 , '>3M.ok', dev.cat )) %>%
-  # select ( -vname ) %>% .vnames %>%
-  # mutate  ( dev.cat = factor(dev.cat, c(levels(dt.adj$dev.cat), '>3M.ok'))) %>% 
-  # filter (avisitn < 4) %>%
+  # mutate( s.group = subgroup.age ) %>%
+  # mutate( s.group = subgroup.mFARS ) %>%
+  # mutate( s.group = subgroup.FARS.E ) %>%
+  # mutate( s.group = s.group.age ) %>%
+  # mutate( s.group = bl.amb ) %>% #mutate(s.group = ifelse(is.na(s.group), 'non-amb.', s.group)) %>%
+  filter( !is.na( s.group )) %>% 
   droplevels()
 
-# window adjustment -------------------------------------------------------
+dt.s %>% ungroup %>% 
+  select(study, sjid, s.group) %>% 
+  # filter(is.na(bl.amb)) %>%
+  unique %>% group_by(study) %>% mutate(N = n()) %>% 
+  group_by(study, s.group, N) %>% 
+  summarise(n = n()) %>% mutate(pct = round(100*n/N,0))
 
-dt. %<>%
-  mutate( avisitn = ifelse(time. < 2.25, round(time.*2)/2, round(time.) ) ) %>%
-  # mutate( flag = ifelse(avisitn.x != avisitn, T, F)) %>%
-  # mutate( avisitn = avisitn.x ) %>%
-  # mutate( window.dev = abs( time. - avisitn ) ) %>%
-  # mutate( dev.cat    = cut(window.dev, c(0, 0.25, 0.5, 1, 10), labels = c('<3M', '>3M', '>6M', '>1y'), include.lowest = T ) ) %>% 
-  droplevels
+# Visit Time Adjustment ---------------------------------------------------
 
-# filter duplicate visits (after adjustement)
+# dt.s %<>%
+#   mutate( avisitn = ifelse(time. < 2.25, round(time.*2)/2, round(time.) ) ) %>%
+#   droplevels
 
-print('all mFARS visits: ')
-dt. %>% filter(paramcd == 'mFARS', study == 'FACHILD') %>% nrow()
-print('all mFARS FU (BL + FU: ')
-dt. %>% filter(paramcd == 'mFARS', study == 'FACHILD') %>% filter(!is.na(bl)) %>% group_by(sjid) %>% filter(n()>1) %>% nrow()
+# Filter duplicate visits after adjustment --------------------------------
 
-# remove FACOMS after adjustment ------------------------------------------
+# dt.s %<>%
+#   mutate( avisitn = ifelse(time. < 2.25, round(time.*2)/2, round(time.) ) ) %>%
+#   mutate( window.dev = abs( time. - avisitn )) %>%
+#   mutate( dev.cat = cut(window.dev, c(0, 0.25, 0.5, 1, 10), labels = c('<3M', '>3M', '>6M', '>1y'), include.lowest = T ) ) %>%
+#   group_by(study, sjid, avisitn) %>%
+#   filter( window.dev == min(window.dev) )
 
-dt. %<>% 
+dt.s %<>%
   filter(!(study == 'FACOMS' & avisitn %in% c(0.5, 1.5)))
-
-# dt. %<>% 
-#   filter(bl.amb == 'ambulatory')
-
-
-# subgroup summary --------------------------------------------------------
-# 
-# dt. %>% 
-#   select()
-# 
-# dt. %>% 
-#   filter(paramcd == 'mFARS') %>% 
-#   ungroup %>% select(study, avisitn, s.group) %>% group_by(avisitn, study, s.group) %>% summarise(n = n()) %>% 
-#   spread(study, n) %>% .ct
 
 # zero lines --------------------------------------------------------------
 
@@ -126,6 +115,9 @@ est.aval %<>%
 
 # plot --------------------------------------------------------------------
 
+.width = 0
+.dodge = .05
+
 clr <- 'black'
 clr <- NA
     
@@ -134,55 +126,181 @@ est.aval %<>%
   droplevels() 
 
 if (est.aval$s.group[1] != 1) {
-
-  est.aval %>% 
-    # filter(paramcd == 'w25.i') %>%
-    arrange(paramcd, avisit) %>% 
-    ggplot()+
-    geom_errorbar(width = .1, position = position_dodge(width = .05), color = 'grey')+
-    aes(ymin = conf.low, ymax = conf.high)+
-    ggh4x::geom_pointpath( position = position_dodge(width = .05) )+
-    aes(linetype = study)+
-    aes(group = paste(study, paramcd))+
-    aes(x = avisitn , y = estimate)+scale_x_continuous(breaks = unique(est.aval$avisitn), labels = levels(est.aval$avisit))+
-    aes(shape = study)+.ssmA+
-    aes(color = s.group)+scale_color_manual(values = c('#e41a1c','#457EB7','#e41a1c','#457EB7'))+
-    aes(group = paste(study, s.group))+
-    facet_wrap(~paramcd, scales = 'free', ncol = 2)+
-    # geom_hline(color = clr, aes(yintercept = 10 ), data = filter(est.aval, paramcd %in% c('mFARS','FARS.E')))+
-    # geom_hline(color = clr, aes(yintercept = -0.5 ), data = filter(est.aval, paramcd %in% c('mFARS','FARS.E')))+
-    # geom_hline(color = clr, aes(yintercept = 4  ), data = filter(est.aval, !(paramcd %in% c('mFARS','FARS.E'))))+
-    # geom_hline(color = clr, aes(yintercept = -1.5 ), data = filter(est.aval, !(paramcd %in% c('mFARS','FARS.E'))))+
-    geom_hline(yintercept = 0, linetype = 2)+
-    .leg_tl+
-    xlab('Visit')+
-    ylab('Change from Baseline (MMRM)')
   
+A <- est.aval %>%
+  filter(paramcd == pars..[1]) %>% 
+  left_join( .rt('../DATA other/scales.txt') %>% select(paramcd, param, paramlong) ) %>%
+  arrange(paramcd, avisit) %>% 
+  ggplot()+
+  geom_errorbar(width = .width, position = position_dodge(width = .dodge), color = 'grey')+
+  aes(ymin = conf.low, ymax = conf.high)+
+  ggh4x::geom_pointpath( position = position_dodge(width = .dodge) )+
+  aes(linetype = study)+
+  aes(group = paste(study, paramcd))+
+  aes(x = avisitn , y = estimate)+scale_x_continuous(breaks = unique(est.aval$avisitn), labels = levels(est.aval$avisit))+
+  aes(shape = study)+.ssmA+
+  aes(color = s.group)+scale_color_manual(values = c('#e41a1c','#457EB7','#e41a1c','#457EB7'))+
+  aes(group = paste(study, s.group))+
+  facet_wrap(~paramlong, scales = 'free', ncol = 2)+
+  geom_hline(yintercept = 0, linetype = 2)+
+  .leg_none+
+  labs(x = NULL, y = NULL)
+
+B <- est.aval %>%
+  filter(paramcd == pars..[2]) %>% 
+  left_join( .rt('../DATA other/scales.txt') %>% select(paramcd, param, paramlong) ) %>%
+  arrange(paramcd, avisit) %>% 
+  ggplot()+
+  geom_errorbar(width = .width, position = position_dodge(width = .dodge), color = 'grey')+
+  aes(ymin = conf.low, ymax = conf.high)+
+  ggh4x::geom_pointpath( position = position_dodge(width = .dodge) )+
+  aes(linetype = study)+
+  aes(group = paste(study, paramcd))+
+  aes(x = avisitn , y = estimate)+scale_x_continuous(breaks = unique(est.aval$avisitn), labels = levels(est.aval$avisit))+
+  aes(shape = study)+.ssmA+
+  aes(color = s.group)+scale_color_manual(values = c('#e41a1c','#457EB7','#e41a1c','#457EB7'))+
+  aes(group = paste(study, s.group))+
+  facet_wrap(~paramlong, scales = 'free', ncol = 2)+
+  geom_hline(yintercept = 0, linetype = 2)+
+  .leg_none+
+  labs(x = NULL, y = NULL)
+# +
+#   labs(x = NULL, y = NULL)
+# +
+#   xlab('Visit')+
+#   ylab('XXX')
+
+C <- est.aval %>%
+  filter(paramcd == pars..[3]) %>% 
+  left_join( .rt('../DATA other/scales.txt') %>% select(paramcd, param, paramlong) ) %>%
+  arrange(paramcd, avisit) %>% 
+  ggplot()+
+  geom_errorbar(width = .width, position = position_dodge(width = .dodge), color = 'grey')+
+  aes(ymin = conf.low, ymax = conf.high)+
+  ggh4x::geom_pointpath( position = position_dodge(width = .dodge) )+
+  aes(linetype = study)+
+  aes(group = paste(study, paramcd))+
+  aes(x = avisitn , y = estimate)+scale_x_continuous(breaks = unique(est.aval$avisitn), labels = levels(est.aval$avisit))+
+  aes(shape = study)+.ssmA+
+  aes(color = s.group)+scale_color_manual(values = c('#e41a1c','#457EB7','#e41a1c','#457EB7'))+
+  aes(group = paste(study, s.group))+
+  facet_wrap(~paramlong, scales = 'free', ncol = 2)+
+  geom_hline(yintercept = 0, linetype = 2)+
+  .leg_none+
+  labs(x = NULL, y = NULL)
+
+D <- est.aval %>%
+  filter(paramcd == pars..[4]) %>% 
+  left_join( .rt('../DATA other/scales.txt') %>% select(paramcd, param, paramlong) ) %>%
+  arrange(paramcd, avisit) %>% 
+  ggplot()+
+  geom_errorbar(width = .width, position = position_dodge(width = .dodge), color = 'grey')+
+  aes(ymin = conf.low, ymax = conf.high)+
+  ggh4x::geom_pointpath( position = position_dodge(width = .dodge) )+
+  aes(linetype = study)+
+  aes(group = paste(study, paramcd))+
+  aes(x = avisitn , y = estimate)+scale_x_continuous(breaks = unique(est.aval$avisitn), labels = levels(est.aval$avisit))+
+  aes(shape = study)+.ssmA+
+  aes(color = s.group)+scale_color_manual(values = c('#e41a1c','#457EB7','#e41a1c','#457EB7'))+
+  aes(group = paste(study, s.group))+
+  facet_wrap(~paramlong, scales = 'free', ncol = 2)+
+  geom_hline(yintercept = 0, linetype = 2)+
+  .leg_none+
+  labs(x = NULL, y = NULL)
+
+
 } else {
     
-  est.aval %>% 
-    arrange(paramcd, avisit) %>% 
-    ggplot()+
-    geom_errorbar(width = .1, position = position_dodge(width = .05), color = 'grey')+
-    aes(ymin = conf.low, ymax = conf.high)+
-    ggh4x::geom_pointpath( position = position_dodge(width = .05) )+
-    aes(linetype = study)+
-    aes(group = paste(study, paramcd))+
-    aes(x = avisitn , y = estimate)+scale_x_continuous(breaks = unique(est.aval$avisitn), labels = levels(est.aval$avisit))+
-    aes(shape = study)+.ssmA+
-    # aes(color = s.group)+scale_color_manual(values = c('#e41a1c','#457EB7','#e41a1c','#457EB7'))+
-    aes(group = paste(study))+
-    facet_wrap(~paramcd, scales = 'free', ncol = 2)+
-    # geom_hline(color = clr, aes(yintercept = 10 ), data = filter(est.aval, paramcd %in% c('mFARS','FARS.E')))+
-    # geom_hline(color = clr, aes(yintercept = -0.5 ), data = filter(est.aval, paramcd %in% c('mFARS','FARS.E')))+
-    # geom_hline(color = clr, aes(yintercept = 4  ), data = filter(est.aval, !(paramcd %in% c('mFARS','FARS.E'))))+
-    # geom_hline(color = clr, aes(yintercept = -1.5 ), data = filter(est.aval, !(paramcd %in% c('mFARS','FARS.E'))))+
-    geom_hline(yintercept = 0, linetype = 2)+
-    .leg_tl+
-    xlab('Visit')+
-    ylab('Change from Baseline (MMRM)')
+A <- est.aval %>% 
+  filter(paramcd == pars..[1]) %>% 
+  left_join( .rt('../DATA other/scales.txt') %>% select(paramcd, param, paramlong) ) %>%
+  arrange(paramcd, avisit) %>% 
+  ggplot()+
+  geom_errorbar(width = .width, position = position_dodge(width = .dodge), color = 'grey')+
+  aes(ymin = conf.low, ymax = conf.high)+
+  ggh4x::geom_pointpath( position = position_dodge(width = .dodge) )+
+  aes(linetype = study)+
+  aes(group = paste(study, paramcd))+
+  aes(x = avisitn , y = estimate)+scale_x_continuous(breaks = unique(est.aval$avisitn), labels = levels(est.aval$avisit))+
+  aes(shape = study)+.ssmA+
+  aes(group = paste(study))+
+  facet_wrap(~paramlong, scales = 'free', ncol = 2)+
+  geom_hline(yintercept = 0, linetype = 2)+
+  .leg_none+
+  labs(x = NULL, y = NULL)
 
-  }
+B <- est.aval %>% 
+  filter(paramcd == pars..[2]) %>% 
+  left_join( .rt('../DATA other/scales.txt') %>% select(paramcd, param, paramlong) ) %>%
+  arrange(paramcd, avisit) %>% 
+  ggplot()+
+  geom_errorbar(width = .width, position = position_dodge(width = .dodge), color = 'grey')+
+  aes(ymin = conf.low, ymax = conf.high)+
+  ggh4x::geom_pointpath( position = position_dodge(width = .dodge) )+
+  aes(linetype = study)+
+  aes(group = paste(study, paramcd))+
+  aes(x = avisitn , y = estimate)+scale_x_continuous(breaks = unique(est.aval$avisitn), labels = levels(est.aval$avisit))+
+  aes(shape = study)+.ssmA+
+  aes(group = paste(study))+
+  facet_wrap(~paramlong, scales = 'free', ncol = 2)+
+  geom_hline(yintercept = 0, linetype = 2)+
+  .leg_none+
+  labs(x = NULL, y = NULL)
+
+C <- est.aval %>% 
+  filter(paramcd == pars..[3]) %>% 
+  left_join( .rt('../DATA other/scales.txt') %>% select(paramcd, param, paramlong) ) %>%
+  arrange(paramcd, avisit) %>% 
+  ggplot()+
+  geom_errorbar(width = .width, position = position_dodge(width = .dodge), color = 'grey')+
+  aes(ymin = conf.low, ymax = conf.high)+
+  ggh4x::geom_pointpath( position = position_dodge(width = .dodge) )+
+  aes(linetype = study)+
+  aes(group = paste(study, paramcd))+
+  aes(x = avisitn , y = estimate)+scale_x_continuous(breaks = unique(est.aval$avisitn), labels = levels(est.aval$avisit))+
+  aes(shape = study)+.ssmA+
+  aes(group = paste(study))+
+  facet_wrap(~paramlong, scales = 'free', ncol = 2)+
+  geom_hline(yintercept = 0, linetype = 2)+
+  .leg_none+
+  labs(x = NULL, y = NULL)
+
+D <- est.aval %>% 
+  filter(paramcd == pars..[4]) %>% 
+  left_join( .rt('../DATA other/scales.txt') %>% select(paramcd, param, paramlong) ) %>%
+  arrange(paramcd, avisit) %>% 
+  ggplot()+
+  geom_errorbar(width = .width, position = position_dodge(width = .dodge), color = 'grey')+
+  aes(ymin = conf.low, ymax = conf.high)+
+  ggh4x::geom_pointpath( position = position_dodge(width = .dodge) )+
+  aes(linetype = study)+
+  aes(group = paste(study, paramcd))+
+  aes(x = avisitn , y = estimate)+scale_x_continuous(breaks = unique(est.aval$avisitn), labels = levels(est.aval$avisit))+
+  aes(shape = study)+.ssmA+
+  aes(group = paste(study))+
+  facet_wrap(~paramlong, scales = 'free', ncol = 2)+
+  geom_hline(yintercept = 0, linetype = 2)+
+  .leg_none+
+  labs(x = NULL, y = NULL)
+
+}
+
+# ggpubr::ggarrange(A + coord_cartesian( ylim = c(-1  , 8)),
+#                   B + coord_cartesian( ylim = c(-1.5, 4)),
+#                   nrow = 2
+# )
+# ggpubr::ggarrange(A + scale_y_continuous(breaks = c(0,4,8)) + coord_cartesian( ylim = c(-1  , 10)),
+#                   B + scale_y_continuous(breaks = c(0,2,4)) + coord_cartesian( ylim = c(-1.5, 4)),
+#                   nrow = 2
+# )
+
+ggpubr::ggarrange(A, B, C, D)
+# ggpubr::ggarrange(A, B, C, D, common.legend = TRUE)
+
+# ggpubr::ggarrange(A + scale_y_continuous(breaks = c(0,4,8)) + coord_cartesian( ylim = c(-1  , 10)),
+#                   B + scale_y_continuous(breaks = c(0,2,4)) + coord_cartesian( ylim = c(-1.5, 4)),
+#                   nrow = 2
+# )
 
 .sp( ti = title )
- 
+

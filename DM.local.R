@@ -55,8 +55,12 @@ dt. %>%
   select(study, avisitn) %>% table
 
 dt. %<>% 
-  group_by(study, sjid, paramcd) %>% 
-  mutate(avisitn = avisitn-min(avisitn))
+  group_by(study, sjid)
+
+dt. <- bind_rows(
+    dt. %>% filter(study == 'FACHILD'),
+    dt. %>% filter(study == 'FACOMS' ) %>% mutate(avisitn = avisitn-min(avisitn))
+    )
 
 dt. %<>%
   group_by(study, sjid ) %>%
@@ -82,7 +86,7 @@ bl.amb.status <- dt. %>%
   group_by( study, sjid) %>% 
   filter  ( avisitn == min(avisitn) ) %>% 
   mutate( bl.amb = amb ) %>% 
-  mutate( bl.amb = ifelse( amb == 'ambulatory' & e7.act < 5, 'ambulatory', bl.amb) ) %>%
+  mutate( bl.amb = ifelse( amb == 'ambulatory' | e7.act < 5, 'ambulatory', bl.amb) ) %>%
   filter(!is.na(bl.amb))
 
 # AEN/ITT Definitions ---------------------------------------------------------
@@ -129,7 +133,7 @@ sjids.FACOMS <- dt. %>%
 
 base <- dt. %>%
   group_by( study, sjid, paramcd ) %>% 
-  filter  ( avisitn == min( avisitn )) %>% 
+  filter  ( avisitn == 0) %>% 
   group_by( study, sjid, paramcd) %>% 
   arrange ( study, sjid, paramcd) %>% 
   rename  ( bl = aval ) %>%
@@ -156,15 +160,14 @@ dt. %<>%
 
 # save previous intervals for FACHILD visit stats
 dt. %>% 
-  filter(study == 'FACHILD') %>% 
+  filter(!is.na(aval)) %>% 
+  # filter(study != 'FACHILD') %>%
   # filter(paramcd != 'mFARS') %>% 
-  mutate(par = ifelse(paramcd == 'mFARS','FARS','other')) %>%
+  mutate(par = ifelse(paramcd == 'mFARS','FARS','ALL')) %>%
   ungroup %>% 
   select(study, avisitn, sjid, par) %>% 
   unique %>% 
-  mutate(value = 1) %>% 
-  spread(par, value) %>% 
-  .wds('DATA derived/FACHILD.visit.stats')
+  .wds('DATA derived/visit.stats')
 
 # dt. %>%
 #   arrange(sjid, avisitn) %>% 
