@@ -168,19 +168,6 @@ dt. %>%
   select(study, avisitn, sjid, par) %>% 
   unique %>% 
   .wds('DATA derived/visit.stats')
-# 
-# dt. %>%
-#   arrange(sjid, avisitn) %>% 
-#   filter( study != 'FACHILD') %>% 
-#   mutate( avisitn.x    = ifelse(study == 'FACHILD' & time. < 2.25, round(time.*2)/2, round(time.) ) ) %>%
-#   mutate( avisitn.x    = ifelse(study == 'FACOMS'                , round(time.  )  , round(time.) ) ) %>%
-#   mutate( flag = ifelse(avisitn.x != avisitn, T, F)) %>%
-#   mutate( avisitn.save = avisitn ) %>%
-#   mutate( avisitn = avisitn.x ) %>%
-#   select( - avisitn.x ) %>%
-#   mutate( window.dev = abs( time. - avisitn ) ) %>%
-#   mutate( dev.cat    = cut(window.dev, c(0, 0.25, 0.5, 1, 10), labels = c('<3M', '>3M', '>6M', '>1y'), include.lowest = T ) ) %>%
-#   saveRDS ( 'DATA derived/dt.adj.rds' )
 
 # re-assign visit labels / timing ------------------------------------------
 
