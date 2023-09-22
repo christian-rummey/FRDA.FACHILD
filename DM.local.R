@@ -56,7 +56,7 @@ dt. %>%
   select(study, avisitn) %>% table
 
 dt. %<>% 
-  group_by(study, sjid)
+  group_by(study, sjid, paramcd)
 
 dt. <- bind_rows(
     dt. %>% filter(study == 'FACHILD'),
@@ -127,9 +127,14 @@ dt. %>% group_by(study) %>% summarise(length(unique(sjid)))
 sjids.FACOMS <- dt. %>% 
   filter( study == 'FACOMS' & paramcd == 'mFARS') %>%
   group_by( sjid ) %>% 
+  filter( !is.na(aval) ) %>% 
   filter( n()>1 ) %>%
   # filter( min(avisitn) == 0 ) %>% # that removes 8 with first visit not 0
   select( sjid ) %>% deframe() %>% unique()
+
+dt. %>% 
+  filter( study == 'FACHILD' | sjid %in% sjids.FACOMS ) %>% 
+  group_by(sjid)
 
 # POPULATIONS DONE --------------------------------------------------------
 
@@ -225,7 +230,7 @@ dm. <- .dd('demo.l') %>%
   filter( sjid %in% unique(dt.$sjid) ) %>% 
   mutate( study = ifelse(sjid %in% sjids.FACHILD, 'FACHILD', NA)) %>% 
   mutate( study = ifelse(sjid %in% sjids.FACOMS , 'FACOMS' , study)) %>% 
-  select( study, site, sjid, sex, aoo, gaa1, pm, birthdt, bl.std.demo.age = age_bl ) %>% 
+  select( study, site, sjid, sex, aoo, gaa1, gaa2, pm, birthdt, bl.std.demo.age = age_bl ) %>% 
   filter( study %in% c('FACHILD', 'FACOMS')) %>% 
   filter( !is.na( study) )
 
@@ -239,7 +244,7 @@ dm. %>%
 dm. %<>% 
   left_join( fu.data ) %>% 
   mutate( bl.age = bl.data.age) %>% 
-  select( study, site, sjid, sex, aoo, gaa1, pm, bl.age, fu, visit.count) %>% 
+  select( study, site, sjid, sex, aoo, gaa1, gaa2, pm, bl.age, fu, visit.count) %>% 
   mutate( itt    = ifelse(sjid %in% sjids.itt        , 'Y','N')) %>% 
   mutate( bl.amb = ifelse(sjid %in% exclude.bl.nonamb, 'non-amb.','ambulatory'))
 
