@@ -60,7 +60,7 @@ dt. %<>%
 
 dt. <- bind_rows(
     dt. %>% filter(study == 'FACHILD'),
-    dt. %>% filter(study == 'FACOMS' ) %>% mutate(avisitn = avisitn-min(avisitn))
+    dt. %>% filter(study == 'FACOMS' ) #%>% mutate(avisitn = avisitn-min(avisitn))
     )
 
 dt. %<>%
@@ -162,9 +162,7 @@ dt. %>%
 # round FACHILD avisitn to half numbers
 
 dt. %<>%
-  # filter ( sjid == 4856, paramcd == 'mFARS' ) %>% arrange(paramcd, avisitn) %>% 
   mutate ( avisitn.x    = ifelse(study == 'FACHILD' & time. < 2.25, round(time.*2)/2, round(time.) ) ) %>%
-  # mutate( flag = ifelse(avisitn.x != avisitn, T, F)) %>%
   mutate ( avisitn.save = avisitn ) %>%
   mutate ( avisitn = avisitn.x ) %>%
   select ( -avisitn.x, -avisitn.save )
@@ -187,22 +185,6 @@ dt. %<>%
   select(-adt) %>% 
   unique()
 
-# Baseline Values, changes and intervals --------------------------------------
-# moved down after interval adjustment 22/09/23
-
-base <- dt. %>%
-  ungroup %>% 
-  filter  ( avisitn == 0) %>% 
-  select  ( study, sjid, paramcd, bl = aval)
-
-dt. %<>% 
-  left_join( base ) %>% 
-  mutate   ( cbl        = aval - bl ) %>% 
-  select   ( study, sjid, avisitn, age, time., paramcd, bl, aval, cbl ) %>% 
-  arrange  ( study, sjid, avisitn, age, time., paramcd )
-
-rm(base)
-
 # follow-up data (after adjustment) ---------------------------------------
 
 fu.data <- dt. %>%
@@ -223,6 +205,46 @@ fu.data <- dt. %>%
   group_by( study, sjid ) %>%
   filter( avisitn == min(avisitn) ) %>%
   ungroup
+
+# introduced before cbls (because adts and times are gone here) -----------
+
+# this removes 20 FACOMS visits - not much data overall (~7 pedsql)
+
+dt. %<>% 
+  select(-age, -time.) %>% 
+  spread(paramcd, aval) %>% 
+  # group_by(sjid, avisitn) %>% 
+  # filter(n()>1) %>% arrange(sjid) %>% 
+  filter( (!is.na(mFARS) | study == 'FACHILD') )
+
+dt. %<>% 
+  group_by(sjid) %>% 
+  mutate(avisitn = avisitn - min(avisitn)) #%>% 
+  # filter(avisitnx != avisitn)
+  # filter(min(avisitn)!=0)
+
+dt. %<>% 
+  gather( paramcd, aval, pars.) %>% 
+  mutate( paramcd = factor(paramcd, pars.))
+
+dt. %<>% 
+  filter(!is.na(aval))
+
+# Baseline Values, changes and intervals --------------------------------------
+# moved down after interval adjustment 22/09/23
+
+base <- dt. %>%
+  ungroup %>% 
+  filter  ( avisitn == 0) %>% 
+  select  ( study, sjid, paramcd, bl = aval)
+
+dt. %<>% 
+  left_join( base ) %>% 
+  mutate   ( cbl        = aval - bl ) %>% 
+  select   ( study, sjid, avisitn, paramcd, bl, aval, cbl ) %>% 
+  arrange  ( study, sjid, avisitn, paramcd )
+
+rm(base)
 
 # demo --------------------------------------------------------------------
 
@@ -266,13 +288,13 @@ subgroup.age <- dt. %>% ungroup %>%
   filter( 
     paramcd == 'mFARS', sjid %in% sjids.itt, avisitn == 0
     ) %>% 
-  left_join(dm. %>% select(study, sjid, bl.amb)) %>% filter( bl.amb == 'ambulatory' ) %>% 
+  left_join(dm. %>% select(study, sjid, bl.amb, bl.age)) %>% filter( bl.amb == 'ambulatory' ) %>% 
   group_by( study ) %>% 
-  mutate( median. = median (age) ) %>% 
+  mutate( median. = median (bl.age) ) %>% 
   mutate( median. = ifelse(study == 'FACOMS', NA, median.)) %>% 
   ungroup( ) %>% 
   mutate( median. = mean(median., na.rm=T) ) %>% 
-  mutate( subgroup.age = ifelse( age < median. , paste0('<', round(median. ,1)), paste0('>', round(median. ,1)))) %>%
+  mutate( subgroup.age = ifelse( bl.age < median. , paste0('<', round(median. ,1)), paste0('>', round(median. ,1)))) %>%
   select( study, sjid, subgroup.age) %>% 
   unique
 
