@@ -44,8 +44,8 @@ dt. %<>%
   filter(age < 21.2 )
 
 dt. %<>% 
-  group_by(study, sjid) %>% 
-  filter( min(age) < 18 ) %>% 
+  group_by( study, sjid ) %>% 
+  filter  ( min( age ) < 18 ) %>% 
   ungroup
 
 # fix avisitn -------------------------------------------------------------
@@ -77,18 +77,21 @@ dt. %<>%
 
 dt. %<>% 
   left_join( 
-    .dd.atx( 'steps', c = T ) %>% 
-      select( study, sjid, avisitn, amb, e7.act ) 
-  )
+    .dd.atx( 'steps', c = T ) %>%
+      select( study, sjid, avisitn, amb, e7.act )
+    )
 
 bl.amb.status <- dt. %>%
-  group_by(sjid) %>% 
-  filter  ( paramcd == 'mFARS') %>% 
-  group_by( study, sjid) %>% 
+  group_by(sjid) %>%
+  filter  ( paramcd == 'mFARS') %>%
+  group_by( study, sjid) %>%
   filter  ( avisitn == min(avisitn) ) %>% 
-  mutate( bl.amb = amb ) %>% 
+  mutate( bl.amb = amb ) %>%
   mutate( bl.amb = ifelse( amb == 'ambulatory' | e7.act < 5, 'ambulatory', bl.amb) ) %>%
   filter(!is.na(bl.amb))
+
+dt. %<>% 
+  select(-amb, -e7.act)
 
 # AEN/ITT Definitions ---------------------------------------------------------
 # AEN includes all FACHILD pts, but only restricted FACOMS pop
@@ -130,23 +133,6 @@ sjids.FACOMS <- dt. %>%
 
 # POPULATIONS DONE --------------------------------------------------------
 
-# Baseline Values ---------------------------------------------------------
-
-base <- dt. %>%
-  group_by( study, sjid, paramcd ) %>% 
-  filter  ( avisitn == 0) %>% 
-  group_by( study, sjid, paramcd) %>% 
-  arrange ( study, sjid, paramcd) %>% 
-  rename  ( bl = aval ) %>%
-  ungroup %>% 
-  select  ( study, sjid, paramcd, bl)
-
-dt. %<>% 
-  left_join( base ) %>% 
-  select ( study, sjid, avisitn, adt, age, time., paramcd, bl, aval )
-
-rm(base)
-
 # fix visit intervals / adjust windows ------------------------------------
 # figure out deviations
 
@@ -168,14 +154,15 @@ dt. %>%
   group_by(study, sjid, paramcd, avisitn) %>% 
   filter(n()>1)
 
-# round FACHILD numbers to half numbers
+# round FACHILD avisitn to half numbers
 
 dt. %<>%
-  mutate( avisitn.x    = ifelse(study == 'FACHILD' & time. < 2.25, round(time.*2)/2, round(time.) ) ) %>%
+  # filter ( sjid == 4856, paramcd == 'mFARS' ) %>% arrange(paramcd, avisitn) %>% 
+  mutate ( avisitn.x    = ifelse(study == 'FACHILD' & time. < 2.25, round(time.*2)/2, round(time.) ) ) %>%
   # mutate( flag = ifelse(avisitn.x != avisitn, T, F)) %>%
-  mutate( avisitn.save = avisitn ) %>%
-  mutate( avisitn = avisitn.x ) %>%
-  select( - avisitn.x, -avisitn.save )
+  mutate ( avisitn.save = avisitn ) %>%
+  mutate ( avisitn = avisitn.x ) %>%
+  select ( -avisitn.x, -avisitn.save )
 
 # 18 mFARS visits get averaged (6 in FACHILD) ---------------------------------
 # 23 Total, 10 FACHILD
@@ -190,51 +177,31 @@ dt. %>%
   select(study) %>% table
 
 dt. %<>% 
-  # filter(paramcd == 'mFARS') %>%
   group_by(study, sjid, paramcd, avisitn) %>% 
-  # filter(n()>1) %>%
   mutate_at(vars(adt, age, time., aval), mean) %>%
+  select(-adt) %>% 
   unique()
-  # mutate(cbl.mean = mean(cbl)) %>% 
-  # filter(n()>1) %>% 
-  # # filter(cbl.mean != cbl) %>% 
-  # filter(abs(cbl.mean - cbl) > 1) %>% 
-  # as.data.frame
 
-# changes and intervals ---------------------------------------------------
-# moved down after interval adjustment 22/09
+# Baseline Values, changes and intervals --------------------------------------
+# moved down after interval adjustment 22/09/23
 
-dt. %<>%
-  group_by ( study, sjid, paramcd ) %>% 
-  arrange  ( study, sjid, paramcd, avisitn ) %>%
+base <- dt. %>%
+  ungroup %>% 
+  filter  ( avisitn == 0) %>% 
+  select  ( study, sjid, paramcd, bl = aval)
+
+dt. %<>% 
+  left_join( base ) %>% 
   mutate   ( cbl        = aval - bl ) %>% 
-  # mutate   ( window.dev = abs( time. - avisitn ) ) %>% 
-  select  ( study, sjid, adt, avisitn, age, time., paramcd, bl, aval, cbl )
+  select   ( study, sjid, avisitn, age, time., paramcd, bl, aval, cbl ) %>% 
+  arrange  ( study, sjid, avisitn, age, time., paramcd )
 
-# # follow-up characteristics for BL -----------------------------------------
+rm(base)
 
-# sjids younger than 8 - keep as is
-# sjids.8 <- dt. %>% 
-#   filter   ( paramcd == 'mFARS' ) %>% 
-#   filter   ( avisitn == 0) %>% 
-#   filter   ( age < 8) %>% 
-#   ungroup %>% select (sjid) %>% deframe 
-# 
-# dt. %>% 
-#   filter(paramcd %in% c('mFARS','FARS.B')) %>% 
-#   filter(sjid %in% sjids.8) %>% 
-#   ggplot()+geom_point()+geom_line()+
-#   aes( x = age, y = aval )+
-#   aes( group = paste(sjid, paramcd))+
-#   aes( shape = study )+.ssmA+
-#   facet_wrap(~sjid)+
-#   geom_hline(yintercept = 17)+
-#   geom_vline(xintercept = 8)+
-#   .box
+# follow-up data (after adjustment) ---------------------------------------
 
 fu.data <- dt. %>%
   filter   ( paramcd == 'mFARS' ) %>%
-  # filter   ( study   == 'FACHILD' ) %>% 
   group_by ( study, sjid, avisitn ) %>%
   mutate_at( vars('age', 'time.'), min ) %>%
   select   ( study, sjid, avisitn, age) %>%
@@ -266,7 +233,7 @@ dm. <- .dd('demo.l') %>%
 dm. %>% 
   left_join(fu.data) %>% 
   mutate(x = bl.std.demo.age-bl.data.age) %>% 
-  arrange(x) %>% 
+  arrange(x) %>%
   print(n=10)
 
 dm. %<>% 
@@ -357,7 +324,6 @@ dt. %>%
   saveRDS ( 'DATA derived/dt.rds' )
 
 rm(pars., params., subgroup.age, subgroup.FARS.E, subgroup.mFARS)
-# rm(exclude.mFARS.17, exclude.mFARS.n1, exclude.bl.nonamb, sjids.FACHILD, sjids.FACOMS, sjids.itt, sjids.aen)
 rm(exclude.mFARS.17, exclude.mFARS.n1, exclude.bl.nonamb, sjids.FACHILD, sjids.FACOMS, sjids.itt, sjids.aen)
 
 
