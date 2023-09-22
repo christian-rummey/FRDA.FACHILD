@@ -3,7 +3,8 @@
 rm(list=ls())
 source('project.settings.R')
 
-pars. <- pars.[c(1,2,3,4)]#, .l.FARS.E[c(2,3,4,5,6,7,9)])
+# pars. <- pars.[c(1,2,3,4)]#, .l.FARS.E[c(2,3,4,5,6,7,9)])
+# pars. <- pars.[c(1,2,12)]#, .l.FARS.E[c(2,3,4,5,6,7,9)])
 
 # DATA --------------------------------------------------------------------
 
@@ -146,15 +147,6 @@ dt. %<>%
 
 rm(base)
 
-# changes and intervals ---------------------------------------------------
-
-dt. %<>%
-  group_by ( study, sjid, paramcd ) %>% 
-  arrange  ( study, sjid, paramcd, avisitn ) %>%
-  mutate   ( cbl        = aval - bl ) %>% 
-  # mutate   ( window.dev = abs( time. - avisitn ) ) %>% 
-  select  ( study, sjid, adt, avisitn, age, time., paramcd, bl, aval, cbl )
-
 # fix visit intervals / adjust windows ------------------------------------
 # figure out deviations
 
@@ -171,31 +163,53 @@ dt. %>%
 
 # re-assign visit labels / timing ------------------------------------------
 
+# there are not double visits before rounding
 dt. %>% 
   group_by(study, sjid, paramcd, avisitn) %>% 
   filter(n()>1)
 
+# round FACHILD numbers to half numbers
+
 dt. %<>%
   mutate( avisitn.x    = ifelse(study == 'FACHILD' & time. < 2.25, round(time.*2)/2, round(time.) ) ) %>%
-  # mutate( avisitn.x    = ifelse(time. < 2.25, round(time.*2)/2, round(time.) ) ) %>%
   # mutate( flag = ifelse(avisitn.x != avisitn, T, F)) %>%
   mutate( avisitn.save = avisitn ) %>%
   mutate( avisitn = avisitn.x ) %>%
   select( - avisitn.x, -avisitn.save )
 
-# 17 mFARS visits get averaged (6 in FACHILD) ---------------------------------
+# 18 mFARS visits get averaged (6 in FACHILD) ---------------------------------
+# 23 Total, 10 FACHILD
+
+dt. %>% 
+  filter(paramcd == 'mFARS') %>%
+  group_by(study, sjid, avisitn, paramcd) %>% 
+  filter(n()>1) %>% 
+  group_by(study, sjid, avisitn) %>% 
+  select(study, sjid, avisitn) %>% 
+  unique %>% ungroup %>% 
+  select(study) %>% table
 
 dt. %<>% 
   # filter(paramcd == 'mFARS') %>%
   group_by(study, sjid, paramcd, avisitn) %>% 
   # filter(n()>1) %>%
-  mutate_at(vars(adt, age, time., aval, cbl), mean) %>%
+  mutate_at(vars(adt, age, time., aval), mean) %>%
   unique()
   # mutate(cbl.mean = mean(cbl)) %>% 
   # filter(n()>1) %>% 
   # # filter(cbl.mean != cbl) %>% 
   # filter(abs(cbl.mean - cbl) > 1) %>% 
   # as.data.frame
+
+# changes and intervals ---------------------------------------------------
+# moved down after interval adjustment 22/09
+
+dt. %<>%
+  group_by ( study, sjid, paramcd ) %>% 
+  arrange  ( study, sjid, paramcd, avisitn ) %>%
+  mutate   ( cbl        = aval - bl ) %>% 
+  # mutate   ( window.dev = abs( time. - avisitn ) ) %>% 
+  select  ( study, sjid, adt, avisitn, age, time., paramcd, bl, aval, cbl )
 
 # # follow-up characteristics for BL -----------------------------------------
 
@@ -349,55 +363,7 @@ rm(exclude.mFARS.17, exclude.mFARS.n1, exclude.bl.nonamb, sjids.FACHILD, sjids.F
 
 # populations -------------------------------------------------------------
 
-# fars.fu.times -----------------------------------------------------------
-# 
-# fars.tmp <- .dd.atx( 'fars', c = T ) %>%
-#   filter(!(sjid %in% sjids.FACHILD & study == 'FACOMS')) %>% 
-#   # filter(study == 'FACHILD') %>% 
-#   filter(paramcd == 'mFARS') %>% 
-#   select(study, sjid, avisit, adt, fpf, mFARS = aval)
-# 
-# dt.x <- dt. %>%
-#   ungroup %>% 
-#   select(sjid, vname, adt, avisitn) %>% 
-#   unique %>% 
-#   left_join(fars.tmp) %>% 
-#   mutate(mFARS = ifelse(is.na(mFARS), F, T))
-# 
-# rm(fars.tmp)
-# 
-# fu.tmp <- dt.x %>% 
-#   group_by(study, sjid) %>% 
-#   mutate( fu.time = as.numeric( max(adt)-min(adt) )/365.25) %>%
-#   filter( mFARS == T) %>% 
-#   mutate( fu.fars = as.numeric( max(adt)-min(adt) )/365.25) %>% 
-#   mutate( fu.fars = ifelse(sjid == 4851, 0, fu.fars ) ) %>% 
-#   select( sjid, fu.time, fu.fars ) %>% 
-#   unique
-# 
-# rm(dt.x)
-# 
-# dt.pop <- fu.tmp %>% 
-#   mutate(itt      = ifelse(sjid %in% c(5183, 4851, 4600, 4228, 4252) , F, T)) %>% 
-#   mutate(itt.1y   = ifelse(max(fu.fars) <= 0.75, F, itt )) %>%
-#   mutate(itt.2y   = ifelse(max(fu.fars) <= 1.75, F, itt )) %>%
-#   mutate(itt.3y   = ifelse(max(fu.fars) <= 2.50, F, itt )) %>%
-#   mutate(itt.3y.w = ifelse(itt.3y & (max(fu.fars) <= 3.50), T, F)) %>% #beware T/F the other way round
-#   select(sjid, starts_with('itt')) %>% 
-#   unique
-# 
-# rm(fu.tmp)
-# 
-# # FARS Subgroups ----------------------------------------------------------
-# 
-# dt.subs <- dm %>%
-#   mutate ( itt.FRE = ifelse( FARS.E > 8 , T, F )) %>% 
-#   mutate ( itt.FEx = ifelse( FARS.E > 8 & FARS.E < 32, T, F )) %>% 
-#   mutate ( itt.mFR = ifelse( mFARS  > 19, T, F )) %>% 
-#   select( sjid, starts_with('itt.'))
-# 
-# 
-# dt.pop %>% 
-#   left_join(dt.subs) %>% 
-#   .wds('DATA derived/FACHILD.pop')
-# 
+dt. %>% 
+  filter(avisitn == 0, cbl != 0)
+
+
