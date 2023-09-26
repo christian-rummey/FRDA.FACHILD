@@ -9,6 +9,7 @@ options(digits = 5)
 dm. <- readRDS('DATA derived/dm.rds')
 
 dt. <- readRDS('DATA derived/dt.rds') %>% 
+  ungroup %>% 
   filter( avisitn == 0 ) %>% 
   filter( paramcd %in% c('mFARS','FARS.E','FARS.B','FARS.C','FARS.Am') ) %>% 
   select( -aval, -cbl, -avisitn) %>% 
@@ -31,8 +32,9 @@ dm. %<>%
 
 var_label(dm.) <- c("study", "site", "sjid", "sex", "Age of Onset", "GAA1", "GAA2", "pm",
                     "Age",'Fullow Up [y]','visit.count', 
-                          "itt", "Ambulation Status", "mFARS Total", 
-                          "Upright Stability (E)", "Upper Limbs (B)", "Lower Limbs (C)", "Bulbar Function (A)", 'Compound Heterozygotes')
+                          "itt", "Ambulation Status", "Visit", "mFARS Total", 
+                          "Upright Stability (E)", "Upper Limbs (B)", "Lower Limbs (C)", "Bulbar Function (A)", 
+                    'Compound Heterozygotes')
 
 # Demo Table --------------------------------------------------------------
 
@@ -52,12 +54,11 @@ tb <- tableone::CreateTableOne(
       explain = F, dropEqual= F,
       add.rownames = T, noSpaces = T) %>%
     data.frame() %>% rownames_to_column() %>%
-    flextable() %>% 
-    fontsize(size = 14, part = "all") %>% 
-    autofit(part = 'all') %>%
-    width(width = 7.4/3) 
-
-print(tb)
+  .ct
+    # flextable() %>% 
+    # fontsize(size = 14, part = "all") %>% 
+    # autofit(part = 'all') %>%
+    # width(width = 7.4/3) %>% 
 
 # Supplementary Table -----------------------------------------------------
 
@@ -77,8 +78,9 @@ tb <- tableone::CreateTableOne(
     missing = F,
     test = F,
     explain = F, dropEqual= F,
-    add.rownames = T, noSpaces = T) %>%
+    add.rownames = T, noSpaces = T)  %>%
   data.frame() %>% rownames_to_column() %>%
+  .ct
   flextable() %>% 
   fontsize(size = 14, part = "all") %>% 
   autofit(part = 'all') %>%

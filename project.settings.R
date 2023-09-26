@@ -10,15 +10,15 @@
 }
 
 theme_set(
-  theme_minimal(base_size = 20)+
-  # theme_minimal(base_size = 14)+
+  # theme_minimal(base_size = 20)+
+  theme_minimal(base_size = 14)+
     theme( panel.grid.minor.y = element_blank(), panel.grid.minor.x = element_blank())+
     # theme( axis.text.y = element_blank())+
     .leg_tl
 )
 
 
-parlst. <- c('mFARS'                          , 'mFARS',
+parlst. <- c('mFARS Total'                    , 'mFARS',
              'Upright Stability (FARS.E)'     , 'FARS.E',
              'Upper Limbs (FARS.B)'           , 'FARS.B',
              'Lower Limbs (FARS.C)'           , 'FARS.C',

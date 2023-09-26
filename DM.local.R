@@ -18,6 +18,7 @@ dt. <- bind_rows(
   filter( study %in% c('FACHILD', 'FACOMS')) %>% 
   filter( paramcd %in% pars.) %>% 
   .add.time( keepadt = T ) %>% 
+  filter(!is.na(aval)) %>% 
   select(study, sjid, avisit, avisitn, adt, age, paramcd, aval)
 
 sjids.FACHILD <- .rd.FACHILD('demo') %>% 
@@ -28,11 +29,11 @@ dt. %<>% group_by( study, sjid, paramcd ) %>%
 
 dt. <- bind_rows(
     dt. %>% filter(study == 'FACHILD'),
-    dt. %>% filter(study == 'FACOMS' ) %>% filter(!(sjid %in% sjids.FACHILD)) %>% filter(time.<=3.5)
+    dt. %>% filter(study == 'FACOMS' ) %>% filter(!(sjid %in% sjids.FACHILD))
     ) %>% 
   select(-avisit)
 
-# reduce to age range -----------------------------------------------------
+# reduce FACOMS to relevant age range -------------------------------------
 # FACHILD maximum BL age is 17.9, remove non-eligible FACOMS patients
 
 dt. %>% ungroup %>% 
@@ -48,20 +49,36 @@ dt. %<>%
   filter  ( min( age ) < 18 ) %>% 
   ungroup
 
-# fix avisitn -------------------------------------------------------------
+# reduce visits to mFARS available (FACOMS!) ------------------------------
+# FACHILD needs to stay due to virtual visits
+
+dt.visits <- dt. %>% 
+  select(-age, -time., -adt) %>% 
+  spread(paramcd, aval) %>% 
+  # select(study, sjid, avisitn, mFARS, bbs, ADL, TOT.P, TOT.C, hpt.i, w25.i, w1m, tug.i, w6m) %>% .ct
+  group_by(sjid, avisitn) %>%
+  # filter(n()>1) %>% arrange(sjid) %>%
+  filter( (!is.na(mFARS) | study == 'FACHILD') ) %>% 
+  select( study, sjid, avisitn )
+
+dt. %<>% 
+  right_join(dt.visits) %>% 
+  group_by(sjid) %>% 
+  mutate(avisitn = avisitn - min(avisitn))
+  # filter(avisitnx != avisitn) %>% ungroup %>% select(study) %>% table
+  # filter(min(avisitn)!=0)
+
+dt. %<>% 
+  mutate( paramcd = factor(paramcd, pars.))
+
+rm(dt.visits)
+
+# time. to 0; avisitn only used for FACHILD visit stats; not need fix -------
 
 dt. %>% 
   group_by(study) %>% 
   select(study, sjid, avisitn) %>% unique %>% 
   select(study, avisitn) %>% table
-
-dt. %<>% 
-  group_by(study, sjid, paramcd)
-
-dt. <- bind_rows(
-    dt. %>% filter(study == 'FACHILD'),
-    dt. %>% filter(study == 'FACOMS' ) #%>% mutate(avisitn = avisitn-min(avisitn))
-    )
 
 dt. %<>%
   group_by(study, sjid ) %>%
@@ -72,30 +89,24 @@ dt. %<>%
   filter( !( (study == 'FACOMS') & time.>3.5 ) ) %>% 
   ungroup
 
-# add steps (needs to happen in dt, not in demo) -------------------------
-# some non-fars visits remain empty here
+# add steps; only necessary for BL -------------------------------------------
 
-dt. %<>% 
+bl.amb.status <- dt. %>%
   left_join( 
     .dd.atx( 'steps', c = T ) %>%
       select( study, sjid, avisitn, amb, e7.act )
-    )
-
-bl.amb.status <- dt. %>%
-  group_by(sjid) %>%
-  filter  ( paramcd == 'mFARS') %>%
+  ) %>% 
+  select (study, sjid, time., avisitn, amb, e7.act) %>%
   group_by( study, sjid) %>%
-  filter  ( avisitn == min(avisitn) ) %>% 
-  mutate( bl.amb = amb ) %>%
-  mutate( bl.amb = ifelse( amb == 'ambulatory' | e7.act < 5, 'ambulatory', bl.amb) ) %>%
-  filter(!is.na(bl.amb))
-
-dt. %<>% 
-  select(-amb, -e7.act)
+  filter  ( avisitn == min(avisitn) ) %>% unique %>%  
+  mutate ( bl.amb = amb ) %>%
+  mutate ( bl.amb = ifelse( amb == 'ambulatory' | e7.act < 5, 'ambulatory', bl.amb) ) %>%
+  filter ( !is.na(bl.amb)) %>% 
+  select ( study, sjid, bl.amb )
 
 # AEN/ITT Definitions ---------------------------------------------------------
 # AEN includes all FACHILD pts, but only restricted FACOMS pop
-# pts from FACHILD that miss any criteria will be in datasets, but not in ITT
+# pts from FACHILD that miss any criteria will be in data sets, but not in ITT
 # 1) fit age range, 2) BL mFARS >= 17, 3) n(fars)>1 4) FDS OR E7<5 
 
 sjids.aen <- dt. %>% filter(sjid %in% bl.amb.status$sjid) %>% select(sjid) %>% unique() %>% deframe
@@ -117,7 +128,7 @@ sjids.itt <- discard(sjids.itt, ~.x %in% c(exclude.mFARS.n1, exclude.mFARS.17, e
 sjids.itt <- discard(sjids.itt, ~.x == 4851) # missing FACHILD BL visit
 sjids.itt <- discard(sjids.itt, ~.x ==   80) # first fars visit != BL (FACOMS)
 
-# datasets will have "all enrolled" for FACHILD, but only pts with 2 FARS FU for FACOMS --------
+# data sets will have "all enrolled" for FACHILD, but only pts with 2 FARS FU for FACOMS --------
 
 dt. %<>% 
   filter( (sjid %in% sjids.FACHILD | sjid %in% sjids.itt ) )
@@ -133,7 +144,7 @@ sjids.FACOMS <- dt. %>%
   select( sjid ) %>% deframe() %>% unique()
 
 dt. %>% 
-  filter( study == 'FACHILD' | sjid %in% sjids.FACOMS ) %>% 
+  filter( study == 'FACHILD'  | sjid %in% sjids.FACOMS ) %>% 
   group_by(sjid)
 
 # POPULATIONS DONE --------------------------------------------------------
@@ -168,7 +179,6 @@ dt. %<>%
   select ( -avisitn.x, -avisitn.save )
 
 # 18 mFARS visits get averaged (6 in FACHILD) ---------------------------------
-# 23 Total, 10 FACHILD
 
 dt. %>% 
   filter(paramcd == 'mFARS') %>%
@@ -206,29 +216,14 @@ fu.data <- dt. %>%
   filter( avisitn == min(avisitn) ) %>%
   ungroup
 
-# introduced before cbls (because adts and times are gone here) -----------
+# only checking here; has been done above ----------------------------------
+# there are 51 FACHILD visits w/o mFARS
+# none in FACOMS
 
-# this removes 20 FACOMS visits - not much data overall (~7 pedsql)
-
-dt. %<>% 
+dt. %>% 
   select(-age, -time.) %>% 
-  spread(paramcd, aval) %>% 
-  # group_by(sjid, avisitn) %>% 
-  # filter(n()>1) %>% arrange(sjid) %>% 
-  filter( (!is.na(mFARS) | study == 'FACHILD') )
-
-dt. %<>% 
-  group_by(sjid) %>% 
-  mutate(avisitn = avisitn - min(avisitn)) #%>% 
-  # filter(avisitnx != avisitn)
-  # filter(min(avisitn)!=0)
-
-dt. %<>% 
-  gather( paramcd, aval, pars.) %>% 
-  mutate( paramcd = factor(paramcd, pars.))
-
-dt. %<>% 
-  filter(!is.na(aval))
+  spread(paramcd, aval) %>%
+  filter(is.na(mFARS)) #%>% print(n=51)
 
 # Baseline Values, changes and intervals --------------------------------------
 # moved down after interval adjustment 22/09/23
@@ -347,7 +342,18 @@ dm. %<>%
 dm. %>% 
   saveRDS ( 'DATA derived/dm.rds' )
 
+dt. %<>% 
+  mutate( avisit = factor(avisitn, c(0,0.5,1,1.5,2,3)) ) %>% 
+  mutate( avisit = fct_recode(avisit,
+                              "BL" = "0",
+                              "6m" = "0.5",
+                              "1y" = "1",
+                              "18m" = "1.5",
+                              "2y" = "2",
+                              "3y" = "3"))
+
 dt. %>% 
+  filter  ( !is.na(cbl) ) %>% 
   saveRDS ( 'DATA derived/dt.rds' )
 
 rm(pars., params., subgroup.age, subgroup.FARS.E, subgroup.mFARS)
@@ -359,4 +365,19 @@ rm(exclude.mFARS.17, exclude.mFARS.n1, exclude.bl.nonamb, sjids.FACHILD, sjids.F
 dt. %>% 
   filter(avisitn == 0, cbl != 0)
 
+dt. %>% 
+  filter( paramcd == 'mFARS') %>% 
+  group_by(sjid) %>% 
+  filter(n()==1)
 
+dt. %>% 
+  filter( paramcd == 'mFARS', avisitn == 0) %>% 
+  filter( aval < 20)
+
+dt. %>% 
+  filter(paramcd %in% c('mFARs', 'FARS.E', 'FARS.B', 'FARS.C')) %>% 
+  select(-cbl, -bl) %>% 
+  spread(paramcd, aval) %>% 
+  left_join(dm. %>% select(sjid, pm)) %>% 
+  filter(pm %in%  c('G130V','I154F')) %>% 
+  print(n=23)
