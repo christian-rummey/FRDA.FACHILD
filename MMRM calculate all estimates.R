@@ -42,10 +42,11 @@ dt. %<>%
 
 # descriptive changes -----------------------------------------------------
 
-dt.s <- dt. %>% 
+dt. %>% 
   filter(avisitn <=3 ) %>% 
   group_by(study, pop, value, paramcd, param, avisit, avisitn ) %>% 
-  summarise(n = n(), m = mean( cbl ), s = sd(cbl ))
+  summarise(n = n(), m = mean( cbl ), s = sd( cbl ), SRM = m/s) %>% 
+  .wds('DATA derived/SRMs')
 
 dt. %<>% 
   # filter(pop == 'all') %>% 

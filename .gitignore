@@ -42,6 +42,6 @@ vignettes/*.pdf
 tmp.*
 *Results/
 DATA derived/
-Output/
+outputs*/
 sort.work/
 *.Rproj
