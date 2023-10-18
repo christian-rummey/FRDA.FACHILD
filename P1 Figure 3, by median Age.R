@@ -17,7 +17,7 @@ est.aval <- readRDS('DATA derived/all estimates.rds') %>%
   mutate ( param  = ifelse ( param == 'mFARS', 'mFARS Total', param )) %>% 
   mutate ( param  = factor(param, levels = params.)) %>% 
   filter ( paramcd %in% pars.) %>% 
-  filter ( pop == 'FARS.E' ) %>% 
+  filter ( pop == 'age' ) %>% 
   droplevels()
 
 # plot --------------------------------------------------------------------
@@ -44,7 +44,7 @@ A <- est.aval %>%
   aes(group = paste(study, value))+
   facet_wrap(~param, scales = 'free', ncol = 2)+
   geom_hline(yintercept = 0, linetype = 2)+
-  .leg_none+
+  .leg_none+.box+
   xlab('Visit')+
   ylab('')
 
@@ -63,7 +63,7 @@ B <- est.aval %>%
   aes(group = paste(study, value))+
   facet_wrap(~param, scales = 'free', ncol = 2)+
   geom_hline(yintercept = 0, linetype = 2)+
-  .leg_none+
+  .leg_none+.box+
   xlab('Visit')+
   ylab('Estimated Change from Baseline (95%CI)')
 
@@ -77,5 +77,5 @@ ggpubr::ggarrange(A + scale_y_continuous(breaks = c(0,4,8)) + coord_cartesian( y
                   nrow = 2
 )
 
-# .sp( ti = 'Figure 6, FARS E' )
+# .sp( ti = 'Figure 3, Age' )
 

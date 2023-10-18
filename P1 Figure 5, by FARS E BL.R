@@ -17,7 +17,7 @@ est.aval <- readRDS('DATA derived/all estimates.rds') %>%
   mutate ( param  = ifelse ( param == 'mFARS', 'mFARS Total', param )) %>% 
   mutate ( param  = factor(param, levels = params.)) %>% 
   filter ( paramcd %in% pars.) %>% 
-  filter ( pop == 'age' ) %>% 
+  filter ( pop == 'FARS.E' ) %>% 
   droplevels()
 
 # plot --------------------------------------------------------------------
@@ -77,5 +77,5 @@ ggpubr::ggarrange(A + scale_y_continuous(breaks = c(0,4,8)) + coord_cartesian( y
                   nrow = 2
 )
 
-# .sp( ti = 'Figure 4, Age' )
+# .sp( ti = 'Figure 5, by FARS E BL' )
 

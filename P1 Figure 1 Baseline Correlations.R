@@ -6,8 +6,13 @@ rm(list=ls())
 
 dt. <- readRDS('DATA derived/dt.rds')
 dm. <- readRDS('DATA derived/dm.rds')
+source('project.settings.R')
 
-dt.tmp <- dt. %>% 
+dt.tmp <- dt. %>%
+  ungroup %>% 
+  mutate ( param  = as.character( paramcd ) ) %>% 
+  mutate ( param  = factor ( param, levels = pars., labels = params. )) %>% 
+  droplevels() %>% 
   left_join(dm.) %>% 
   filter(itt) %>%
   filter(paramcd %in% c('mFARS','FARS.E','FARS.B','FARS.C')) %>% 
@@ -29,7 +34,7 @@ dt.tmp %>%
   aes(alpha = study)+scale_alpha_manual(values = c(1,0.5,1))+
   geom_smooth(method = lm, aes(group = study), se = F, data = filter(dt.tmp, !pmx ))+
   geom_smooth(method = lm, aes(group = study), se = F, data = filter(dt.tmp, !pmx ), linetype = 3)+
-  facet_wrap(~paramcd, scales = 'free_y')+
+  facet_wrap(~param, scales = 'free_y')+
   labs(x = 'Age at Baseline', y = 'Score')+
   # geom_vline(xintercept = c(6,8,10), linetype = 2)+
   # geom_text(aes(label = pm), data = filter(dt.tmp, (pm %in% c('G130V','I154F')), paramcd == 'FARS.B'))+

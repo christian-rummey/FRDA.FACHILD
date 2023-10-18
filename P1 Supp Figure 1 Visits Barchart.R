@@ -13,7 +13,7 @@
 
 # . -----------------------------------------------------------------------
 
-# Overall Visits 
+# Overall Visits, for early Results Section
 (6*108)
 538/(6*108)
 
@@ -69,8 +69,8 @@ readRDS('../DATA/FACHILD/current/concl.rds') %>%
   filter(c_cnclstat != 1) %>% 
   select(c_wdrsn5) %>%
   table
-  arrange(c_wddt) %>% 
-  print(n=30)
+  # arrange(c_wddt) %>% 
+  # print(n=30)
   
   # 06 = Inability to continue giving consent
   # 07 = Unwilling/unable to commit time and/or resources, moved from area, etc.

@@ -42,7 +42,8 @@ A <- est.aval %>%
   aes(shape = study)+.ssmA+
   aes(group = paste(study))+
   facet_wrap(~param, scales = 'free', ncol = 2)+
-  .leg_none+
+  .leg_none+.box+
+  geom_hline(yintercept = 0, linetype = 2)+
   # theme(strip.text = element_text(hjust = 0))+
   xlab('Visit')+
   ylab('')
@@ -60,7 +61,8 @@ B <- est.aval %>%
   aes(shape = study)+.ssmA+
   aes(group = paste(study))+
   facet_wrap(~param, scales = 'free', ncol = 2 )+
-  .leg_none+
+  geom_hline(yintercept = 0, linetype = 2)+
+  .leg_none+.box+
   # theme(strip.text = element_text(hjust = 0))+
   xlab('Visit')+
   ylab('Estimated Change from Baseline (95%CI)')
