@@ -161,7 +161,7 @@ dt. %>%
   ungroup %>% 
   select(study, avisitn, sjid, par) %>% 
   unique %>% 
-  .wds('DATA derived/visit.stats')
+  .wds('../FRDA.FACHILD/DATA derived/visit.stats')
 
 # re-assign visit labels / timing ------------------------------------------
 
@@ -309,7 +309,6 @@ subgroup.mFARS <- dt. %>% ungroup %>%
   select( study, sjid, subgroup.mFARS) %>% 
   unique
 
-
 # median FARS.E subgroups -------------------------------------------------
 
 subgroup.FARS.E <- dt. %>% ungroup %>%
@@ -358,7 +357,6 @@ dt. %>%
 
 rm(pars., params., subgroup.age, subgroup.FARS.E, subgroup.mFARS)
 rm(exclude.mFARS.17, exclude.mFARS.n1, exclude.bl.nonamb, sjids.FACHILD, sjids.FACOMS, sjids.itt, sjids.aen)
-
 
 # populations -------------------------------------------------------------
 
